@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Careers in the Age of AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #0a0a0f;
+    --card:     #14141c;
+    --border:   #252535;
+    --text:     #e8e8f0;
+    --muted:    #888899;
+    --c1: #00e5ff;
+    --c2: #ff3d6b;
+    --c3: #ffe600;
+    --c4: #7c3aed;
+    --c5: #00d68f;
+    --c6: #ff7b00;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* subtle noise */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 0;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    position: relative; z-index: 1;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 80px 48px 64px;
+  }
+
+  .hero-chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--c1); border: 1px solid var(--c1);
+    padding: 5px 12px; border-radius: 2px;
+    margin-bottom: 32px;
+    animation: up 0.5s ease both;
+  }
+  .hero-chip::before {
+    content: '';
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--c1);
+    animation: blink 2s ease infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+  .hero h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(3.8rem, 9vw, 7.5rem);
+    line-height: 0.9; letter-spacing: 0.01em;
+    margin-bottom: 28px;
+    animation: up 0.5s 0.08s ease both;
+  }
+  .hero h1 em { font-style: normal; color: var(--c1); display: block; }
+
+  .hero p {
+    font-size: 16px; color: var(--muted);
+    max-width: 520px; line-height: 1.7;
+    margin-bottom: 36px;
+    animation: up 0.5s 0.16s ease both;
+  }
+  .hero p strong { color: var(--text); font-weight: 500; }
+
+  /* task box */
+  .task-box {
+    background: rgba(0,229,255,0.05);
+    border: 1px solid rgba(0,229,255,0.22);
+    border-radius: 8px;
+    padding: 20px 26px;
+    max-width: 580px;
+    animation: up 0.5s 0.24s ease both;
+  }
+  .task-box-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; font-weight: 700;
+    letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--c1); margin-bottom: 10px;
+  }
+  .task-box p { font-size: 13.5px; color: var(--muted); margin-bottom: 12px; }
+  .task-box p strong { color: var(--text); font-weight: 500; }
+  .task-items {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 5px 24px;
+  }
+  .task-items span {
+    font-size: 12.5px; color: var(--muted);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .task-items span::before { content: '→'; color: var(--c1); font-weight: 700; flex-shrink: 0; }
+
+  /* ── NAV (sticky filter) ── */
+  .nav-wrap {
+    position: sticky; top: 0; z-index: 20;
+    background: rgba(10,10,15,0.94);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav {
+    max-width: 860px; margin: 0 auto;
+    padding: 0 48px;
+    display: flex; align-items: center; gap: 0;
+    overflow-x: auto;
+  }
+  .nav::-webkit-scrollbar { display: none; }
+  .nav-lbl {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; font-weight: 700;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--muted); white-space: nowrap;
+    padding: 14px 16px 14px 0;
+    border-right: 1px solid var(--border);
+    margin-right: 4px;
+  }
+  .nav-btn {
+    background: none; border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13.5px; font-weight: 500;
+    color: var(--muted); cursor: pointer;
+    padding: 14px 16px;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .nav-btn:hover { color: var(--text); }
+  .nav-btn.active { color: var(--c1); border-bottom-color: var(--c1); }
+
+  /* ── MAIN ── */
+  .main {
+    position: relative; z-index: 1;
+    max-width: 860px; margin: 0 auto;
+    padding: 0 48px 100px;
+  }
+
+  /* ── SECTION HEADER ── */
+  .section {
+    margin-top: 72px;
+  }
+  .section-head {
+    display: flex; align-items: center; gap: 16px;
+    margin-bottom: 36px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-icon { font-size: 28px; line-height: 1; }
+  .section-head h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.4rem; letter-spacing: 0.03em;
+    line-height: 1; color: var(--text);
+  }
+  .section-head h2 span { display: block; }
+  .section-desc {
+    font-size: 14px; color: var(--muted);
+    margin-left: auto;
+    max-width: 260px;
+    text-align: right;
+    line-height: 1.5;
+  }
+
+  /* ── CARD GRID ── */
+  .cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 640px) {
+    .cards { grid-template-columns: 1fr; }
+    .section-desc { display: none; }
+    .hero, .main, .nav { padding-left: 20px; padding-right: 20px; }
+    .task-items { grid-template-columns: 1fr; }
+  }
+
+  /* ── CARD ── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 32px 28px 28px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+  }
+  .card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.45);
+  }
+
+  /* top accent bar */
+  .card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+  .card[data-c="1"]::before { background: var(--c1); }
+  .card[data-c="2"]::before { background: var(--c2); }
+  .card[data-c="3"]::before { background: var(--c3); }
+  .card[data-c="4"]::before { background: var(--c4); }
+  .card[data-c="5"]::before { background: var(--c5); }
+  .card[data-c="6"]::before { background: var(--c6); }
+
+  .card:hover { border-color: #3a3a50; }
+
+  .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+  .card-emoji { font-size: 30px; line-height: 1; }
+
+  /* salary pill */
+  .card-salary {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px; font-weight: 700;
+    padding: 4px 11px; border-radius: 100px;
+    border: 1px solid;
+  }
+  .card[data-c="1"] .card-salary { color: var(--c1); border-color: rgba(0,229,255,0.3); background: rgba(0,229,255,0.07); }
+  .card[data-c="2"] .card-salary { color: var(--c2); border-color: rgba(255,61,107,0.3); background: rgba(255,61,107,0.07); }
+  .card[data-c="3"] .card-salary { color: var(--c3); border-color: rgba(255,230,0,0.3); background: rgba(255,230,0,0.07); }
+  .card[data-c="4"] .card-salary { color: var(--c4); border-color: rgba(124,58,237,0.3); background: rgba(124,58,237,0.07); }
+  .card[data-c="5"] .card-salary { color: var(--c5); border-color: rgba(0,214,143,0.3); background: rgba(0,214,143,0.07); }
+  .card[data-c="6"] .card-salary { color: var(--c6); border-color: rgba(255,123,0,0.3); background: rgba(255,123,0,0.07); }
+
+  .card-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem; letter-spacing: 0.02em; line-height: 1;
+    margin-bottom: 14px;
+  }
+
+  .card-rule {
+    height: 1px; background: var(--border);
+    margin-bottom: 16px;
+  }
+
+  .card-body {
+    font-size: 14px; color: var(--muted); line-height: 1.7;
+  }
+  .card-body strong { color: var(--text); font-weight: 500; }
+
+  /* ── FOOTER ── */
+  .footer {
+    border-top: 1px solid var(--border);
+    padding: 28px 48px;
+    text-align: center;
+    position: relative; z-index: 1;
+  }
+  .footer p {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--muted);
+  }
+
+  @keyframes up {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="hero-chip">Year 8 Computing — AI &amp; Careers</div>
+  <h1>Careers in<br>the <em>Age of AI</em></h1>
+  <p>AI is changing almost every job. Some careers are <strong>built around AI</strong> — others are being <strong>transformed by it</strong>. Explore the jobs below.</p>
+  <div class="task-box">
+    <div class="task-box-label">📋 Your Task</div>
+    <p>Pick <strong>three jobs</strong> that interest you. Read each card carefully and record the following in a table in OneNote:</p>
+    <div class="task-items">
+      <span>Job title</span>
+      <span>Industry / sector</span>
+      <span>Typical salary</span>
+      <span>Skills needed</span>
+      <span>Qualifications required</span>
+    </div>
+  </div>
+</header>
+
+<!-- STICKY NAV -->
+<nav class="nav-wrap" aria-label="Jump to section">
+  <div class="nav">
+    <span class="nav-lbl">Jump to</span>
+    <button class="nav-btn active" onclick="jumpTo('sec-ai-built')">AI-Built Roles</button>
+    <button class="nav-btn" onclick="jumpTo('sec-tech')">Tech &amp; Data</button>
+    <button class="nav-btn" onclick="jumpTo('sec-creative')">Creative</button>
+    <button class="nav-btn" onclick="jumpTo('sec-science')">Science &amp; Health</button>
+    <button class="nav-btn" onclick="jumpTo('sec-business')">Business &amp; Law</button>
+  </div>
+</nav>
+
+<!-- MAIN CONTENT -->
+<main class="main">
+
+  <!-- ── SECTION 1: Jobs that only exist because of AI ── -->
+  <section class="section" id="sec-ai-built" data-section="sec-ai-built">
+    <div class="section-head">
+      <span class="section-icon">🧠</span>
+      <h2>AI-Built <span>Roles</span></h2>
+      <p class="section-desc">Jobs that barely existed ten years ago — created directly by the rise of AI.</p>
+    </div>
+    <div class="cards">
+
+      <div class="card" data-c="1">
+        <div class="card-header">
+          <span class="card-emoji">⚙️</span>
+          <span class="card-salary">£55k – £110k</span>
+        </div>
+        <div class="card-title">Machine Learning Engineer</div>
+        <div class="card-rule"></div>
+        <p class="card-body">
+          Works in the <strong>technology industry</strong> building and training AI systems that learn from data. Needs a love of <strong>maths and problem-solving</strong>, plus coding skills. Usually needs a university degree in computer science or mathematics.
+        </p>
+      </div>
+
+      <div class="card" data-c="1">
+        <div class="card-header">
+          <span class="card-emoji">✍️</span>
+          <span class="card-salary">£38k – £75k</span>
+        </div>
+        <div class="card-title">Prompt Engineer</div>
+        <div class="card-rule"></div>
+        <p class="card-body">
+          Found in <strong>technology and media</strong>, this role is about crafting the right instructions to get the best results from AI tools. Needs strong <strong>communication, creativity, and clear thinking</strong> — no specialist coding required. Backgrounds in English, computing, or any creative subject can lead here.
+        </p>
+      </div>
+
+      <div class="card" data-c="2">
+        <div class="card-header">
+          <span class="card-emoji">⚖️</span>
+          <span class="card-salary">£50k – £95k</span>
+        </div>
+        <div class="card-title">AI Ethics Officer</div>
+        <div class="card-rule"></div>
+        <p class="card-body">
+          Works across <strong>government, law, and large tech companies</strong> to make sure AI is being used fairly and safely. Needs <strong>critical thinking, research, and writing skills</strong>. A degree in law, philosophy, or computer science is the typical route.
+        </p>
+      </div>
+
+      <div class="card" data-c="4">
+        <div class="card-header">
+          <span class="card-emoji">🛡️</span>
+          <span class="card-salary">£60k – £130k</span>
+        </div>
+        <div class="card-title">AI Safety Engineer</div>
+        <div class="card-rule"></div>
+        <p class="card-body">
+          Works at <strong>research labs and government organisations</strong> to make sure powerful AI systems behave safely. Needs exceptional <strong>problem-solving and logical thinking</strong>. A degree in computer science or maths is expected.
+        </p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── SECTION 2: Tech & Data ── -->
+  <section class="section" id="sec-tech" data-section="sec-tech">
+    <div class="section-head">
+      <span class="section-icon">💻</span>
+      <h2>Tech <span>&amp; Data</span></h2>
+      <p class="section-desc">Technical roles where AI has become an everyday tool.</p>
+    </div>
+    <div class="cards">
+
+      <div class="card" data-c="1">
+        <div class="card-header">
+          <span class="card-emoji">📊</span>
+          <span class="card-salary">£45k – £90k</span>
+        </div>
+        <div class="card-title">Data Scientist</div>
+        <div class="card-rule"></div>
+        <p class="card-body">
+          In demand across <strong>finance, healthcare, sport, and retail</strong> — uses AI to find patterns in large datasets and help organisations make better decisions. Needs <strong>numeracy, problem-solving, and the ability to explain results clearly</strong>. A degree in maths, statistics, or computer science is the common route.
+        </p>
+      </div>
+
+      <div class="card" data-c="2">
+        <div class="card-header">
+          <span class="card-emoji">🔐</span>
+          <span class="card-salary">£40k – £85k</span>
+        </div>
+        <div class="card-title">Cybersecurity Analyst</div>
+        <div class="card-rule"></div>
+        <p class="card-body">
+          Protects organisations across <strong>banking, government, and healthcare</strong> from hackers — AI is used on both sides of this battle. Needs <strong>logical thinking, attention to detail, and curiosity</strong> about how systems work. A degree in computer science is a common starting point.
+        </p>
+      </div>
+
+      <div class="card" data-c="6">
+        <div class="card-header">
+          <span class="card-emoji">🗂️</span>
+          <span class="card-salary">£50k – £100k</span>
+        </div>
+        <div class="card-title">AI Product Manager</div>
+        <div class="card-rule"></div>
+        <p class="card-body">
+          Decides what an AI product should do and who it is for, working in the <strong>technology and software industry</strong>. Needs <strong>communication, organisation, and empathy</strong> — understanding what users actually need. A background in business, computer science, or design all work well.
+        </p>
+      </div>
+
+      <div class="card" data-c="5">
+        <div class="card-header">
+          <span class="card-emoji">🤖</span>
+          <span class="card-salary">£45k – £95k</span>
+        </div>
+        <div class="card-title">Robotics Engineer</div>
+        <div class="card-rule"></div>
+        <p class="card-body">
+          Builds the machines that AI controls, across <strong>manufacturing, healthcare, and space</strong>. Needs strong <strong>maths, engineering, and problem-solving skills</strong>. A degree in mechanical or electrical engineering, or computer science, is the normal starting point.
+        </p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── SECTION 3: Creative ── -->
+  <section class="section" id="sec-creative" data-section="sec-creative">
+    <div class="section-head">
+      <span class="section-icon">🎨</span>
+      <h2>Creative</h2>
+      <p class="section-desc">Creative industries transformed by generative AI tools.</p>
+    </div>
+    <div class="cards">
+
+      <div class="card" data-c="3">
+        <div class="card-header">
+          <span class="card-emoji">🎨</span>
+          <span class="card-salary">£35k – £70k</span>
+        </div>
+        <div class="card-title">Generative AI Designer</div>
+        <div class="card-rule"></div>
+        <p class="card-body">
+          Uses AI tools to produce images, video, and animation for clients in the <strong>creative, advertising, and media industries</strong>. Needs <strong>visual creativity, a strong eye for design, and the ability to direct AI outputs</strong> to match a brief. A portfolio of creative work matters as much as qualifications.
+        </p>
+      </div>
+
+      <div class="card" data-c="3">
+        <div class="card-header">
+          <span class="card-emoji">🎮</span>
+          <span class="card-salary">£30k – £80k</span>
+        </div>
+        <div class="card-title">Game Developer</div>
+        <div class="card-rule"></div>
+        <p class="card-body">
+          Works in the <strong>games and entertainment industry</strong> building interactive worlds — AI now creates character behaviour, generates environments, and speeds up production. Needs <strong>programming skills, creative problem-solving, and a passion for games</strong>. A degree in computer science or a strong portfolio of made games opens doors.
+        </p>
+      </div>
+
+      <div class="card" data-c="3">
+        <div class="card-header">
+          <span class="card-emoji">📰</span>
+          <span class="card-salary">£28k – £65k</span>
+        </div>
+        <div class="card-title">AI Content Producer</div>
+        <div class="card-rule"></div>
+        <p class="card-body">
+          Works in <strong>media, publishing, and marketing</strong> using AI to research, draft, and reach audiences — but always applying their own judgement. Needs strong <strong>writing, fact-checking, and storytelling skills</strong>. A degree in journalism or English is common.
+        </p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── SECTION 4: Science & Health ── -->
+  <section class="section" id="sec-science" data-section="sec-science">
+    <div class="section-head">
+      <span class="section-icon">🔬</span>
+      <h2>Science <span>&amp; Health</span></h2>
+      <p class="section-desc">Scientific and medical careers where AI is making a real difference.</p>
+    </div>
+    <div class="cards">
+
+      <div class="card" data-c="5">
+        <div class="card-header">
+          <span class="card-emoji">🏥</span>
+          <span class="card-salary">£60k – £150k</span>
+        </div>
+        <div class="card-title">AI-Assisted Doctor</div>
+        <div class="card-rule"></div>
+        <p class="card-body">
+          Works in <strong>healthcare and medicine</strong> alongside AI tools that help spot diseases earlier. Still needs full medical training, plus the ability to <strong>understand AI well enough to question it</strong> and explain it to patients. Strong science subjects lead to a medical degree.
+        </p>
+      </div>
+
+      <div class="card" data-c="5">
+        <div class="card-header">
+          <span class="card-emoji">🌍</span>
+          <span class="card-salary">£35k – £75k</span>
+        </div>
+        <div class="card-title">Climate Scientist</div>
+        <div class="card-rule"></div>
+        <p class="card-body">
+          Uses AI to model weather, predict floods, and track environmental change, working in <strong>universities, government, and environmental organisations</strong>. Needs strong <strong>maths, data analysis, and scientific thinking</strong>. A degree in geography, physics, or environmental science is the starting point.
+        </p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── SECTION 5: Business & Law ── -->
+  <section class="section" id="sec-business" data-section="sec-business">
+    <div class="section-head">
+      <span class="section-icon">💼</span>
+      <h2>Business <span>&amp; Law</span></h2>
+      <p class="section-desc">Professional careers where AI is handling more of the heavy lifting.</p>
+    </div>
+    <div class="cards">
+
+      <div class="card" data-c="6">
+        <div class="card-header">
+          <span class="card-emoji">📜</span>
+          <span class="card-salary">£45k – £100k</span>
+        </div>
+        <div class="card-title">Legal Tech Specialist</div>
+        <div class="card-rule"></div>
+        <p class="card-body">
+          Works in the <strong>legal industry</strong> where AI searches documents and drafts contracts — bridges the gap between law and technology. Needs <strong>reading, writing, analytical thinking, and attention to detail</strong>. A degree in law or a combined law and computing degree is the typical path.
+        </p>
+      </div>
+
+      <div class="card" data-c="6">
+        <div class="card-header">
+          <span class="card-emoji">📈</span>
+          <span class="card-salary">£35k – £90k</span>
+        </div>
+        <div class="card-title">Financial Analyst</div>
+        <div class="card-rule"></div>
+        <p class="card-body">
+          Works in the <strong>finance industry</strong> alongside AI that detects fraud and predicts market trends. Interprets what the AI finds and advises on decisions. Needs <strong>strong numeracy, commercial awareness, and clear communication</strong>. A degree in finance, economics, or maths is the most common route.
+        </p>
+      </div>
+
+      <div class="card" data-c="4">
+        <div class="card-header">
+          <span class="card-emoji">📚</span>
+          <span class="card-salary">£32k – £70k</span>
+        </div>
+        <div class="card-title">EdTech Developer</div>
+        <div class="card-rule"></div>
+        <p class="card-body">
+          Builds AI-powered tools for the <strong>education and technology sectors</strong> — products that personalise learning and help teachers. Needs <strong>empathy, programming skills, and a genuine enthusiasm for education</strong>. Degrees in computer science, education, or psychology all fit well.
+        </p>
+      </div>
+
+    </div>
+  </section>
+
+</main>
+
+
+<script>
+  const navBtns = document.querySelectorAll('.nav-btn');
+
+  function jumpTo(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const offset = document.querySelector('.nav-wrap').offsetHeight + 24;
+    const top = el.getBoundingClientRect().top + window.scrollY - offset;
+    window.scrollTo({ top, behavior: 'smooth' });
+  }
+
+  // Highlight active nav button as sections scroll into view
+  const sections = document.querySelectorAll('.section[id]');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        navBtns.forEach(b => {
+          b.classList.toggle('active', b.getAttribute('onclick').includes(entry.target.id));
+        });
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
