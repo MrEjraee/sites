@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Media Timeline</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      background: #f7f7f5;
+      font-family: Arial, Helvetica, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 16px 16px 0;
+      gap: 10px;
+    }
+
+    /* ── Header ─────────────────────────────────────── */
+    header {
+      width: 100%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    header h1 {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: #111;
+    }
+    header p {
+      font-size: 13px;
+      color: #555;
+    }
+    .header-left { display: flex; flex-direction: column; gap: 2px; }
+
+    /* ── Timeline card — shrinks to fit SVG, never grows beyond it ── */
+    .timeline-card {
+      width: 100%;
+      flex-shrink: 0;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 16px 16px 12px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* SVG wrapper — natural height from aspect ratio, capped at 48vh */
+    .timeline-svg-wrap {
+      width: 100%;
+      margin-left: 0;
+      position: relative;
+    }
+    .timeline-svg-wrap svg {
+      width: 100%;
+      height: auto;
+      max-height: 48vh;
+      display: block;
+      overflow: visible;
+    }
+
+    /* Drop zone overlays — fixed, positioned over SVG plot area by JS */
+    .drop-zones {
+      position: fixed;
+      top: 0; left: 0;
+      width: 0; height: 0;
+      pointer-events: none;
+    }
+    .drop-zone {
+      position: fixed;
+      pointer-events: none;
+      cursor: crosshair;
+    }
+    .drop-zone.drag-over {
+      background: rgba(0,0,0,0.04);
+      outline: 2px dashed #aaa;
+      border-radius: 2px;
+      pointer-events: none;
+    }
+
+    /* placedContainer — fixed, clips inside use position:fixed too */
+    #placedContainer {
+      position: fixed;
+      top: 0; left: 0;
+      width: 0; height: 0;
+      pointer-events: none;
+      z-index: 50;
+    }
+
+    /* ── Placed clip blocks on the timeline ─────────── */
+    .clip-block {
+      position: fixed;
+      pointer-events: all;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+    }
+
+    /* The filled bar between markers */
+    .clip-bar {
+      position: absolute;
+      left: 0; right: 0;
+      top: 10%; height: 80%;
+      background: rgba(0,0,0,0.07);
+      border: 1.5px solid rgba(0,0,0,0.25);
+      border-radius: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      overflow: visible;
+      cursor: grab;
+    }
+    .clip-bar:active { cursor: grabbing; }
+
+    /* Filename label inside the bar */
+    .clip-thumb {
+      font-size: 11px;
+      font-weight: 600;
+      color: #222;
+      white-space: nowrap;
+      overflow: visible;
+      pointer-events: none;
+      flex-shrink: 0;
+    }
+
+    /* Duration label in the centre */
+    .clip-duration {
+      font-size: 11px;
+      font-weight: 700;
+      color: #222;
+      white-space: nowrap;
+      pointer-events: none;
+      letter-spacing: 0.03em;
+    }
+
+    /* Remove button */
+    .clip-remove {
+      position: absolute;
+      top: -1px; right: -1px;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: #333;
+      color: #fff;
+      font-size: 10px;
+      line-height: 16px;
+      text-align: center;
+      cursor: pointer;
+      display: none;
+      z-index: 20;
+      transform: translate(40%, -40%);
+    }
+    .clip-block:hover .clip-remove { display: block; }
+
+    /* Start / end marker handles */
+    .clip-handle {
+      position: absolute;
+      top: 0; bottom: 0;
+      width: 12px;
+      cursor: ew-resize;
+      z-index: 15;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .clip-handle.start { left: -6px; }
+    .clip-handle.end   { right: -6px; }
+
+    /* Visual marker line */
+    .clip-handle::before {
+      content: '';
+      display: block;
+      width: 3px;
+      height: 100%;
+      background: #222;
+      border-radius: 2px;
+    }
+
+    /* Tooltip showing the second value */
+    .clip-handle .handle-tip {
+      position: absolute;
+      bottom: calc(100% + 4px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: #222;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 5px;
+      border-radius: 3px;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.1s;
+    }
+    .clip-handle:hover .handle-tip,
+    .clip-handle.dragging .handle-tip { opacity: 1; }
+
+    /* ── Image tray — fills all remaining space ─────── */
+    .tray-card {
+      width: 100%;
+      flex: 1 1 0;
+      min-height: 0;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 8px 8px 0 0;
+      border-bottom: none;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .tray-header {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 8px;
+      flex-shrink: 0;
+    }
+    .tray-header h2 {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #111;
+    }
+    .tray-header span {
+      font-size: 11px;
+      color: #888;
+    }
+
+    .tray-sections {
+      display: flex;
+      flex-direction: row;
+      gap: 0;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .tray-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid #eee;
+      padding: 0 12px;
+      overflow: hidden;
+    }
+    .tray-section:first-child { padding-left: 0; }
+    .tray-section:last-child  { border-right: none; padding-right: 0; }
+    .tray-section-label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #888;
+      margin-bottom: 6px;
+      flex-shrink: 0;
+    }
+    .tray-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: flex-start;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .tray-item {
+      cursor: grab;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+    }
+    .tray-item:active { cursor: grabbing; }
+    .tray-item img {
+      height: 80px;
+      width: auto;
+      max-width: 140px;
+      object-fit: contain;
+      border-radius: 3px;
+      border: 1px solid #e0e0e0;
+      background: #fafafa;
+      display: block;
+    }
+    .tray-item.used { opacity: 0.3; pointer-events: none; }
+    .tray-item span {
+      font-size: 13px;
+      color: #666;
+      letter-spacing: 0.02em;
+    }
+
+    /* ── Controls (inline with header) ──────────────── */
+    .controls {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    button {
+      padding: 8px 18px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      border: 1.5px solid #222;
+      border-radius: 4px;
+      background: #fff;
+      color: #222;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    button:hover { background: #222; color: #fff; }
+    button.primary { background: #222; color: #fff; }
+    button.primary:hover { background: #000; }
+
+    /* ── Empty state hint ────────────────────────────── */
+    .empty-hint {
+      position: absolute;
+      pointer-events: none;
+      font-size: 10px;
+      color: #bbb;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+      transform: translateY(-50%);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>Media Timeline</h1>
+    <p>Drag images from the tray onto the correct track at the right time position.</p>
+  </div>
+  <div class="controls" style="display:none"></div>
+</header>
+
+<!-- Timeline -->
+<div class="timeline-card">
+  <div class="timeline-svg-wrap" id="svgWrap">
+
+    <!-- The SVG timeline (viewBox coordinates match previous version exactly) -->
+    <svg id="timelineSvg" viewBox="0 0 1400 380" xmlns="http://www.w3.org/2000/svg">
+
+      <!-- Band fills -->
+      <rect x="68" y="119" width="1316" height="109" fill="rgba(255, 220, 80, 0.22)" />
+      <rect x="68" y="228" width="1316" height="108" fill="rgba(100, 180, 255, 0.22)" />
+
+      <!-- Band border lines -->
+      <line id="band-top"        x1="68" y1="10"  x2="1384" y2="10"  stroke="black" stroke-width="1.5" />
+      <line id="band-audio-top"  x1="68" y1="119" x2="1384" y2="119" stroke="black" stroke-width="1.5" />
+      <line id="band-st-top"     x1="68" y1="228" x2="1384" y2="228" stroke="black" stroke-width="1.5" />
+      <line id="band-bottom"     x1="68" y1="336" x2="1384" y2="336" stroke="black" stroke-width="1.5" />
+
+      <!-- Y-axis -->
+      <line x1="68" y1="10" x2="68" y2="336" stroke="black" stroke-width="1.5" />
+
+      <!-- Row labels -->
+      <text transform="translate(62,64) rotate(-90)"   text-anchor="middle" font-size="9" font-weight="bold" font-family="Arial,Helvetica,sans-serif" fill="black" letter-spacing="1.2">VIDEO</text>
+      <text transform="translate(62,173) rotate(-90)"  text-anchor="middle" font-size="9" font-weight="bold" font-family="Arial,Helvetica,sans-serif" fill="black" letter-spacing="1.2">AUDIO</text>
+      <text transform="translate(62,282) rotate(-90)"  text-anchor="middle" font-size="9" font-weight="bold" font-family="Arial,Helvetica,sans-serif" fill="black" letter-spacing="1.2">SOUNDTRACK</text>
+
+      <!-- X-axis ticks + labels: x = 68 + (s/30)*1316 -->
+      <line id="tick-0"  x1="68"   y1="336" x2="68"   y2="342" stroke="black" stroke-width="1.2" />
+      <text x="68"   y="355" text-anchor="middle" font-size="12" font-family="Arial,Helvetica,sans-serif" fill="black">0</text>
+
+      <line x1="287"  y1="336" x2="287"  y2="342" stroke="black" stroke-width="1.2" />
+      <text x="287"  y="355" text-anchor="middle" font-size="12" font-family="Arial,Helvetica,sans-serif" fill="black">5</text>
+
+      <line x1="507"  y1="336" x2="507"  y2="342" stroke="black" stroke-width="1.2" />
+      <text x="507"  y="355" text-anchor="middle" font-size="12" font-family="Arial,Helvetica,sans-serif" fill="black">10</text>
+
+      <line x1="726"  y1="336" x2="726"  y2="342" stroke="black" stroke-width="1.2" />
+      <text x="726"  y="355" text-anchor="middle" font-size="12" font-family="Arial,Helvetica,sans-serif" fill="black">15</text>
+
+      <line x1="945"  y1="336" x2="945"  y2="342" stroke="black" stroke-width="1.2" />
+      <text x="945"  y="355" text-anchor="middle" font-size="12" font-family="Arial,Helvetica,sans-serif" fill="black">20</text>
+
+      <line x1="1165" y1="336" x2="1165" y2="342" stroke="black" stroke-width="1.2" />
+      <text x="1165" y="355" text-anchor="middle" font-size="12" font-family="Arial,Helvetica,sans-serif" fill="black">25</text>
+
+      <line id="tick-30" x1="1384" y1="336" x2="1384" y2="342" stroke="black" stroke-width="1.2" />
+      <text x="1384" y="355" text-anchor="middle" font-size="12" font-family="Arial,Helvetica,sans-serif" fill="black">30</text>
+
+      <!-- X-axis label -->
+      <text x="726" y="373" text-anchor="middle" font-size="12" font-weight="bold" font-family="Arial,Helvetica,sans-serif" fill="black" letter-spacing="2">SECONDS</text>
+    </svg>
+
+    <!-- Invisible drop zones overlaid on the SVG (positioned via JS after render) -->
+    <div class="drop-zones" id="dropZones">
+      <div class="drop-zone" id="dz-video"      data-track="video"      ></div>
+      <div class="drop-zone" id="dz-audio"      data-track="audio"      ></div>
+      <div class="drop-zone" id="dz-soundtrack" data-track="soundtrack" ></div>
+    </div>
+
+    <!-- Placed clips live here -->
+    <div id="placedContainer"></div>
+  </div>
+</div>
+
+<!-- Image tray -->
+<div class="tray-card">
+  <div class="tray-header">
+    <h2>Image Tray</h2>
+    <span>Drag an image onto the timeline track above</span>
+  </div>
+  <div class="tray-sections">
+    <div class="tray-section">
+      <div class="tray-section-label">Video</div>
+      <div class="tray-row" id="tray-video"></div>
+    </div>
+    <div class="tray-section">
+      <div class="tray-section-label">Audio</div>
+      <div class="tray-row" id="tray-audio"></div>
+    </div>
+    <div class="tray-section">
+      <div class="tray-section-label">Soundtrack</div>
+      <div class="tray-row" id="tray-soundtrack"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── Config ────────────────────────────────────────────────
+  // SVG viewBox dimensions
+  const VB_W = 1400, VB_H = 380;
+  // Plot area in viewBox coords
+  const PLOT_X0 = 68, PLOT_X1 = 1384; // left/right edge of timeline
+  const TRACKS = {
+    video:      { y0: 10,  y1: 119 },
+    audio:      { y0: 119, y1: 228 },
+    soundtrack: { y0: 228, y1: 336 },
+  };
+
+  // ── Image catalogue ───────────────────────────────────────
+  // Filenames are listed here directly — no server or manifest needed.
+  // To add/remove images, just edit the arrays below.
+  const MANIFEST = {
+    video: [
+      "Fairground_night.mp4.png",
+      "People1.mp4.png",
+      "People2.mp4.png",
+      "Ride1.mp4.png",
+      "Ride2.mp4.png",
+      "RollerCoaster1.mp4.png",
+      "RollerCoaster2.mp4.png",
+      "RollerCoaster3.mp4.png",
+      "RollerCoaster4.mp4.png",
+      "RollerCoaster5.mp4.png",
+      "RollerCoaster6.mp4.png",
+      "RollerCoaster7.mp4.png",
+      "RollerCoaster8.mp4.png",
+      "RollerCoaster9.mp4.png",
+      "RollerCoaster10.mp4.png",
+      "RollerCoaster11.mp4.png",
+      "ThemeParkAerial.mp4.png",
+      "ThemeParkAerial2.mp4.png",
+      "ThemeParkSide.mp4.png",
+      "WaterSlide1.mp4.png"
+    ],
+    audio: [
+      "bbc_fairground_07072160.mp3.png",
+      "beep.wav.png",
+      "thunder.mp3.png",
+      "bbc_heartbeats_07070016.mp3.png",
+      "footsteps.wav.png",
+      "scream.mp3.png"
+    ],
+    soundtrack: [
+      "againstallodds.mp3.png",
+      "dreambig.mp3.png",
+      "evolution.mp3.png",
+      "happyrock.mp3.png",
+      "clapandyell.mp3.png",
+      "dreams.mp3.png",
+      "dragmentsofsunlight.mp3.png",
+      "hey.mp3.png",
+      "creativeminds.mp3.png",
+      "eventhorizon.mp3.png",
+      "funday.mp3.png",
+      "onrepeat.mp3.png",
+      "sunsetreverie.mp3.png",
+      "unbreakableresolve.mp3.png"
+    ]
+  };
+
+  let dragging = null;
+  let placedItems = [];
+  let idCounter = 0;
+
+  // ── Add a single item to the tray ────────────────────────
+  function addTrayItem(track, filename) {
+    const row = document.getElementById(`tray-${track}`);
+    const src = `${track}/${filename}`;
+    const label = filename.replace(/\.[^.]+$/, '').replace(/\.[^.]+$/, ''); // strip double ext e.g. .mp3.png
+
+    const wrap = document.createElement('div');
+    wrap.className = 'tray-item';
+    wrap.dataset.src = src;
+    wrap.dataset.track = track;
+
+    const img = document.createElement('img');
+    img.src = src;
+    img.alt = label;
+    img.draggable = false;
+    img.onerror = () => { wrap.style.display = 'none'; };
+
+    const lbl = document.createElement('span');
+    lbl.textContent = label;
+
+    wrap.appendChild(img);
+    wrap.appendChild(lbl);
+    row.appendChild(wrap);
+
+    wrap.addEventListener('mousedown', e => startDragFromTray(e, wrap));
+    wrap.addEventListener('touchstart', e => startDragFromTray(e, wrap), {passive:false});
+  }
+
+  // ── Build tray ────────────────────────────────────────────
+  function buildTray() {
+    ['video','audio','soundtrack'].forEach(track => {
+      (MANIFEST[track] || []).forEach(filename => addTrayItem(track, filename));
+    });
+  }
+
+  // ── Coordinate helpers ────────────────────────────────────
+  // Use SVG's own coordinate transform to get exact screen positions.
+
+  function svgPoint(vbX, vbY) {
+    const svg = document.getElementById('timelineSvg');
+    const pt  = svg.createSVGPoint();
+    pt.x = vbX; pt.y = vbY;
+    return pt.matrixTransform(svg.getScreenCTM());
+  }
+
+  // Plot left/right screen X from the tick elements
+  function getPlotBounds() {
+    const left  = svgPoint(PLOT_X0, 0).x;
+    const right = svgPoint(PLOT_X1, 0).x;
+    return { left, right };
+  }
+
+  // screen x → 0–1 fraction along the plot area
+  function clientXtoPct(clientX) {
+    const { left, right } = getPlotBounds();
+    return Math.max(0, Math.min(1, (clientX - left) / (right - left)));
+  }
+
+  // 0–1 fraction → screen x pixels
+  function pctToScreenX(pct) {
+    const { left, right } = getPlotBounds();
+    return left + pct * (right - left);
+  }
+
+  // Determine which track a clientY falls in — uses exact SVG coords via getScreenCTM
+  function clientYtoTrack(clientY) {
+    // First try exact match
+    for (const [name, t] of Object.entries(TRACKS)) {
+      const top    = svgPoint(0, t.y0).y;
+      const bottom = svgPoint(0, t.y1).y;
+      if (clientY >= top && clientY <= bottom) return name;
+    }
+    // Fallback: snap to the nearest track band (so drops just outside still work)
+    let best = null, bestDist = Infinity;
+    for (const [name, t] of Object.entries(TRACKS)) {
+      const mid  = svgPoint(0, (t.y0 + t.y1) / 2).y;
+      const dist = Math.abs(clientY - mid);
+      if (dist < bestDist) { bestDist = dist; best = name; }
+    }
+    // Only snap if within 60px of a band centre
+    return bestDist < 60 ? best : null;
+  }
+
+  // Track → screen top/height in pixels
+  function trackToScreenBand(track) {
+    const t      = TRACKS[track];
+    const top    = svgPoint(0, t.y0).y;
+    const bottom = svgPoint(0, t.y1).y;
+    return { top, height: bottom - top };
+  }
+
+  // ── Ghost image for dragging ──────────────────────────────
+  let ghost = null;
+  function createGhost(src) {
+    removeGhost();
+    ghost = document.createElement('img');
+    ghost.src = src;
+    ghost.style.cssText = `
+      position:fixed; pointer-events:none; z-index:9999;
+      height:70px; width:auto; opacity:0.75;
+      transform:translate(-50%,-50%);
+      border-radius:3px;
+    `;
+    document.body.appendChild(ghost);
+  }
+  function moveGhost(e) {
+    if (!ghost) return;
+    const cx = e.touches ? e.touches[0].clientX : e.clientX;
+    const cy = e.touches ? e.touches[0].clientY : e.clientY;
+    ghost.style.left = cx + 'px';
+    ghost.style.top  = cy + 'px';
+  }
+  function removeGhost() {
+    if (ghost) { ghost.remove(); ghost = null; }
+  }
+
+  // ── Drag from tray ────────────────────────────────────────
+  function startDragFromTray(e, wrap) {
+    if (wrap.classList.contains('used')) return;
+    e.preventDefault();
+    dragging = { src: wrap.dataset.src, trayEl: wrap, fromPlaced: false };
+    createGhost(wrap.dataset.src);
+    moveGhost(e);
+  }
+
+  // ── Drag a placed clip (move whole block) ────────────────
+  function startDragFromPlaced(e, item) {
+    e.preventDefault();
+    const clickPct = clientXtoPct(e.clientX);
+    const offsetPct = clickPct - item.startPct;
+    dragging = { src: item.src, fromPlaced: true, placedId: item.id, offsetPct };
+    item.el.style.opacity = '0.4';
+    createGhost(item.src);
+    moveGhost(e);
+  }
+
+  // ── Global mouse/touch move & up ─────────────────────────
+  document.addEventListener('mousemove', e => {
+    if (dragging) {
+      moveGhost(e);
+      // Highlight whichever drop zone the cursor is over
+      ['video','audio','soundtrack'].forEach(track => {
+        const dz = document.getElementById(`dz-${track}`);
+        const isOver = clientYtoTrack(e.clientY) === track;
+        dz.classList.toggle('drag-over', isOver);
+      });
+    }
+    if (resizing) doResize(e);
+  });
+  document.addEventListener('touchmove', e => {
+    if (dragging) moveGhost(e);
+    if (resizing) doResize(e);
+  }, {passive:false});
+
+  document.addEventListener('mouseup',  e => { drop(e); endResize(); });
+  document.addEventListener('touchend', e => { drop(e); endResize(); });
+
+  function drop(e) {
+    if (!dragging) return;
+    // Clear all drag-over highlights
+    document.querySelectorAll('.drop-zone').forEach(dz => dz.classList.remove('drag-over'));
+
+    const cx = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+    const cy = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
+    const track = clientYtoTrack(cy);
+    const dropPct = clientXtoPct(cx);
+
+    if (track !== null) {
+      if (dragging.fromPlaced) {
+        const item = placedItems.find(p => p.id === dragging.placedId);
+        if (item) {
+          const dur = item.endPct - item.startPct;
+          let newStart = dropPct - (dragging.offsetPct || 0);
+          newStart = Math.max(0, Math.min(1 - dur, newStart));
+          item.startPct = newStart;
+          item.endPct   = newStart + dur;
+          item.track    = track;
+          item.el.style.opacity = '1';
+          updateClipBlock(item);
+        }
+      } else {
+        dragging.trayEl.classList.add('used');
+        const DEFAULT_DUR = 0.1; // 10% of timeline = 3s default width
+        const startPct = Math.max(0, Math.min(1 - DEFAULT_DUR, dropPct - DEFAULT_DUR / 2));
+        placedImage(dragging.src, track, startPct, startPct + DEFAULT_DUR);
+      }
+    } else {
+      if (dragging.fromPlaced) {
+        const item = placedItems.find(p => p.id === dragging.placedId);
+        if (item) item.el.style.opacity = '1';
+      }
+    }
+    removeGhost();
+    dragging = null;
+  }
+
+  // ── Resize (handle drag) ──────────────────────────────────
+  let resizing = null; // { item, handle: 'start'|'end' }
+
+  function startResize(e, item, handle) {
+    e.preventDefault();
+    e.stopPropagation();
+    resizing = { item, handle };
+    document.querySelector(`#clip-${item.id} .clip-handle.${handle}`).classList.add('dragging');
+  }
+  function doResize(e) {
+    if (!resizing) return;
+    const cx = e.touches ? e.touches[0].clientX : e.clientX;
+    const pct = clientXtoPct(cx);
+    const { item, handle } = resizing;
+    const MIN_DUR = 0.01;
+    if (handle === 'start') {
+      item.startPct = Math.max(0, Math.min(item.endPct - MIN_DUR, pct));
+    } else {
+      item.endPct = Math.min(1, Math.max(item.startPct + MIN_DUR, pct));
+    }
+    updateClipBlock(item);
+  }
+  function endResize() {
+    if (!resizing) return;
+    document.querySelectorAll('.clip-handle.dragging').forEach(h => h.classList.remove('dragging'));
+    resizing = null;
+  }
+
+  // ── Format seconds ────────────────────────────────────────
+  function fmtSec(pct) {
+    return (pct * 30).toFixed(1) + 's';
+  }
+
+  // ── Update a clip block's position/size/labels ────────────
+  function updateClipBlock(item) {
+    const band   = trackToScreenBand(item.track);
+    const startX = pctToScreenX(item.startPct);
+    const endX   = pctToScreenX(item.endPct);
+    const dur    = ((item.endPct - item.startPct) * 30).toFixed(1);
+
+    item.el.style.position = 'fixed';
+    item.el.style.top      = band.top + 'px';
+    item.el.style.height   = band.height + 'px';
+    item.el.style.left     = startX + 'px';
+    item.el.style.width    = (endX - startX) + 'px';
+
+    item.el.querySelector('.handle-start-tip').textContent = fmtSec(item.startPct);
+    item.el.querySelector('.handle-end-tip').textContent   = fmtSec(item.endPct);
+    item.el.querySelector('.clip-duration').textContent    = dur + 's';
+  }
+
+  // ── Place an image on the timeline ───────────────────────
+  function placedImage(src, track, startPct, endPct) {
+    const id = ++idCounter;
+
+    const container = document.getElementById('placedContainer');
+    const block = document.createElement('div');
+    block.className = 'clip-block';
+    block.id = `clip-${id}`;
+
+    // Bar (the filled region)
+    const bar = document.createElement('div');
+    bar.className = 'clip-bar';
+
+    const thumb = document.createElement('span');
+    thumb.className = 'clip-thumb';
+    // Strip folder prefix and double extension (e.g. video/RollerCoaster1.mp4.png → RollerCoaster1)
+    const filename = src.split('/').pop().replace(/\.[^.]+$/, '').replace(/\.[^.]+$/, '');
+    thumb.textContent = filename;
+
+    const durLabel = document.createElement('span');
+    durLabel.className = 'clip-duration';
+    const dur = ((endPct - startPct) * 30).toFixed(1);
+    durLabel.textContent = dur + 's';
+
+    bar.appendChild(thumb);
+    bar.appendChild(durLabel);
+
+    // Remove button
+    const removeBtn = document.createElement('div');
+    removeBtn.className = 'clip-remove';
+    removeBtn.textContent = '×';
+
+    // Start handle
+    const startHandle = document.createElement('div');
+    startHandle.className = 'clip-handle start';
+    const startTip = document.createElement('span');
+    startTip.className = 'handle-tip handle-start-tip';
+    startTip.textContent = fmtSec(startPct);
+    startHandle.appendChild(startTip);
+
+    // End handle
+    const endHandle = document.createElement('div');
+    endHandle.className = 'clip-handle end';
+    const endTip = document.createElement('span');
+    endTip.className = 'handle-tip handle-end-tip';
+    endTip.textContent = fmtSec(endPct);
+    endHandle.appendChild(endTip);
+
+    block.appendChild(bar);
+    block.appendChild(removeBtn);
+    block.appendChild(startHandle);
+    block.appendChild(endHandle);
+    container.appendChild(block);
+
+    const item = { id, src, track, startPct, endPct, el: block };
+    placedItems.push(item);
+    updateClipBlock(item);
+
+    // Move whole block
+    bar.addEventListener('mousedown', e => {
+      if (e.target === removeBtn) return;
+      startDragFromPlaced(e, item);
+    });
+    bar.addEventListener('touchstart', e => startDragFromPlaced(e, item), {passive:false});
+
+    // Resize handles
+    startHandle.addEventListener('mousedown',  e => startResize(e, item, 'start'));
+    startHandle.addEventListener('touchstart', e => startResize(e, item, 'start'), {passive:false});
+    endHandle.addEventListener('mousedown',    e => startResize(e, item, 'end'));
+    endHandle.addEventListener('touchstart',   e => startResize(e, item, 'end'), {passive:false});
+
+    // Remove
+    removeBtn.addEventListener('click', ev => { ev.stopPropagation(); removePlaced(id, true); });
+    removeBtn.addEventListener('mousedown', ev => ev.stopPropagation());
+  }
+
+  // ── Remove a placed item ──────────────────────────────────
+  function removePlaced(id, restoreTray) {
+    const idx = placedItems.findIndex(p => p.id === id);
+    if (idx === -1) return;
+    const item = placedItems[idx];
+    item.el.remove();
+    placedItems.splice(idx, 1);
+    if (restoreTray) {
+      document.querySelectorAll('.tray-item').forEach(t => {
+        if (t.dataset.src === item.src) t.classList.remove('used');
+      });
+    }
+  }
+
+  // ── Clear all ─────────────────────────────────────────────
+  function clearAll() {
+    [...placedItems].forEach(item => removePlaced(item.id, true));
+  }
+
+  // ── Position drop zones and re-render clips ───────────────
+  function positionDropZones() {
+    const { left, right } = getPlotBounds();
+    const plotW = right - left;
+
+    ['video','audio','soundtrack'].forEach(track => {
+      const dz   = document.getElementById(`dz-${track}`);
+      const band = trackToScreenBand(track);
+      dz.style.position = 'fixed';
+      dz.style.left     = left + 'px';
+      dz.style.width    = plotW + 'px';
+      dz.style.top      = band.top + 'px';
+      dz.style.height   = band.height + 'px';
+      dz.style.zIndex   = '40';
+    });
+
+    placedItems.forEach(item => updateClipBlock(item));
+  }
+
+  // ── Drag-over highlight ───────────────────────────────────
+  document.querySelectorAll('.drop-zone').forEach(dz => {
+    dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+    dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+    dz.addEventListener('drop', () => dz.classList.remove('drag-over'));
+  });
+
+  // ── Init ──────────────────────────────────────────────────
+  buildTray();
+  positionDropZones();
+  window.addEventListener('resize', positionDropZones);
+</script>
+</body>
+</html></script>
+</body>
+</html>
