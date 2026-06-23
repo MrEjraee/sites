@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson images — train your AI model</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --ink:#16182e;
+    --bg:#eef1f7;
+    --surface:#ffffff;
+    --muted:#5b6076;
+    --line:#dde2ee;
+
+    --train:#138a5e;        /* training = learning / growing */
+    --train-soft:#e4f4ec;
+    --test:#cf7716;         /* testing = checking your work */
+    --test-soft:#fbeeda;
+
+    --focus:#3d5afe;
+    --radius:16px;
+    --shadow:0 1px 2px rgba(22,24,46,.06), 0 8px 24px rgba(22,24,46,.07);
+    --shadow-lift:0 6px 14px rgba(22,24,46,.10), 0 20px 44px rgba(22,24,46,.16);
+
+    --display:"Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+    --body:"Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  }
+
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;
+    font-family:var(--body);
+    color:var(--ink);
+    background:
+      radial-gradient(1200px 500px at 85% -10%, #fff 0, rgba(255,255,255,0) 60%),
+      var(--bg);
+    line-height:1.5;
+  }
+
+  .wrap{max-width:1080px; margin:0 auto; padding:clamp(20px,4vw,40px)}
+
+  /* ---- header ---- */
+  header .eyebrow{
+    font-family:var(--display);
+    font-weight:700;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    font-size:.74rem;
+    color:var(--muted);
+    margin:0 0 .5rem;
+  }
+  header h1{
+    font-family:var(--display);
+    font-weight:800;
+    font-size:clamp(1.9rem,5vw,3.1rem);
+    line-height:1.02;
+    letter-spacing:-.02em;
+    margin:0 0 .6rem;
+  }
+  header h1 .accent{color:var(--train)}
+  header p.lede{
+    max-width:60ch;
+    margin:0;
+    color:var(--muted);
+    font-size:1.05rem;
+  }
+
+  /* ---- how-to panel ---- */
+  .howto{
+    margin:26px 0 8px;
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:14px;
+  }
+  .step{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:16px 18px;
+    box-shadow:var(--shadow);
+  }
+  .step .num{
+    font-family:var(--display);
+    font-weight:800;
+    font-size:.85rem;
+    color:var(--train);
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:26px;height:26px;
+    border-radius:50%;
+    background:var(--train-soft);
+    margin-bottom:10px;
+  }
+  .step h3{font-size:.98rem; margin:.1rem 0 .25rem; font-weight:600}
+  .step p{margin:0; font-size:.9rem; color:var(--muted)}
+  .step b{color:var(--ink); font-weight:600}
+
+  /* ---- set switcher ---- */
+  .switch{
+    display:inline-flex;
+    gap:4px;
+    padding:5px;
+    margin:30px 0 22px;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:999px;
+    box-shadow:var(--shadow);
+  }
+  .switch button{
+    appearance:none;
+    border:0;
+    cursor:pointer;
+    font-family:var(--body);
+    font-weight:600;
+    font-size:.95rem;
+    color:var(--muted);
+    background:transparent;
+    padding:9px 18px;
+    border-radius:999px;
+    display:inline-flex;
+    align-items:center;
+    gap:9px;
+    transition:background .18s ease, color .18s ease;
+  }
+  .switch button .count{
+    font-size:.78rem;
+    font-weight:700;
+    padding:1px 8px;
+    border-radius:999px;
+    background:var(--bg);
+    color:var(--muted);
+  }
+  .switch button[aria-pressed="true"]{color:#fff}
+  .switch button[data-set="training"][aria-pressed="true"]{background:var(--train)}
+  .switch button[data-set="testing"][aria-pressed="true"]{background:var(--test)}
+  .switch button[aria-pressed="true"] .count{background:rgba(255,255,255,.22); color:#fff}
+
+  /* ---- panels ---- */
+  .panel{display:none}
+  .panel.active{display:block; animation:fade .22s ease both}
+  @keyframes fade{from{opacity:0; transform:translateY(4px)} to{opacity:1; transform:none}}
+
+  .panel-head{display:flex; align-items:baseline; gap:12px; margin-bottom:6px}
+  .panel-head h2{
+    font-family:var(--display);
+    font-weight:700;
+    font-size:1.35rem;
+    margin:0;
+    letter-spacing:-.01em;
+  }
+  .panel[data-set="training"] .panel-head h2{color:var(--train)}
+  .panel[data-set="testing"]  .panel-head h2{color:var(--test)}
+  .panel-head p{margin:0; color:var(--muted); font-size:.92rem}
+
+  /* ---- image grid ---- */
+  .grid{
+    margin-top:18px;
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(150px, 1fr));
+    gap:16px;
+  }
+
+  .card{
+    margin:0;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    overflow:hidden;
+    box-shadow:var(--shadow);
+    transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+    position:relative;
+  }
+  .panel[data-set="training"] .card{border-top:3px solid var(--train)}
+  .panel[data-set="testing"]  .card{border-top:3px solid var(--test)}
+
+  .card:hover{transform:translateY(-4px); box-shadow:var(--shadow-lift)}
+
+  .thumb{
+    aspect-ratio:1/1;
+    background:
+      repeating-conic-gradient(#f1f3f9 0% 25%, #fafbfe 0% 50%) 50% / 22px 22px;
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+  }
+  .thumb img{
+    width:100%; height:100%;
+    object-fit:cover;
+    display:block;
+    cursor:grab;
+    -webkit-user-drag:element;
+  }
+  .thumb img:active{cursor:grabbing}
+
+  figcaption{
+    padding:10px 12px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+  }
+  figcaption .name{
+    font-size:.84rem;
+    font-weight:500;
+    word-break:break-all;
+    color:var(--ink);
+  }
+  .chip{
+    flex:none;
+    font-size:.7rem;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    padding:3px 8px;
+    border-radius:999px;
+  }
+  .panel[data-set="training"] .chip{background:var(--train-soft); color:var(--train)}
+  .panel[data-set="testing"]  .chip{background:var(--test-soft);  color:var(--test)}
+
+  .drag-hint{
+    position:absolute;
+    top:8px; right:8px;
+    font-size:.68rem;
+    font-weight:700;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    color:#fff;
+    background:rgba(22,24,46,.62);
+    backdrop-filter:blur(2px);
+    padding:3px 8px;
+    border-radius:999px;
+    opacity:0;
+    transform:translateY(-2px);
+    transition:opacity .16s ease, transform .16s ease;
+    pointer-events:none;
+  }
+  .card:hover .drag-hint{opacity:1; transform:none}
+
+  /* ---- missing image state ---- */
+  .card.missing{border-top-color:#c2c7d6}
+  .card.missing .thumb{
+    background:#f6f7fb;
+    flex-direction:column;
+    gap:8px;
+    padding:14px;
+    text-align:center;
+  }
+  .card.missing .thumb img{display:none}
+  .card.missing .miss-msg{
+    font-size:.82rem;
+    color:var(--muted);
+    line-height:1.35;
+  }
+  .card.missing .miss-msg b{color:var(--ink); word-break:break-all}
+
+  .empty{
+    padding:34px;
+    text-align:center;
+    color:var(--muted);
+    background:var(--surface);
+    border:1px dashed var(--line);
+    border-radius:var(--radius);
+  }
+
+  footer{
+    margin-top:46px;
+    padding-top:18px;
+    border-top:1px solid var(--line);
+    color:var(--muted);
+    font-size:.85rem;
+  }
+  footer a{color:var(--train); font-weight:600}
+
+  /* ---- accessibility ---- */
+  a:focus-visible, button:focus-visible, img:focus-visible{
+    outline:3px solid var(--focus);
+    outline-offset:2px;
+    border-radius:8px;
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none !important; animation:none !important}
+  }
+</style>
+</head>
+
+<body>
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">Computing · Machine learning</p>
+    <h1>Grab the images to <span class="accent">train your model</span></h1>
+    <p class="lede">All the pictures for today's lesson live here. Drag them straight into your
+      Machine Learning for Kids tab to build, then check, your AI model.</p>
+  </header>
+
+  <div class="switch" role="group" aria-label="Choose an image set">
+    <button type="button" data-set="training" aria-pressed="true">
+      Training set <span class="count" id="count-training">0</span>
+    </button>
+    <button type="button" data-set="testing" aria-pressed="false">
+      Testing set <span class="count" id="count-testing">0</span>
+    </button>
+  </div>
+
+  <section class="panel active" data-set="training" aria-label="Training images">
+    <div class="panel-head">
+      <h2>Training set</h2>
+      <p>Teach the model with these.</p>
+    </div>
+    <div class="grid" id="grid-training"></div>
+  </section>
+
+  <section class="panel" data-set="testing" aria-label="Testing images">
+    <div class="panel-head">
+      <h2>Testing set</h2>
+      <p>Hold these back to check the model.</p>
+    </div>
+    <div class="grid" id="grid-testing"></div>
+  </section>
+
+</div>
+
+<script>
+/* =======================================================================
+   IMAGE FILES
+   -----------------------------------------------------------------------
+   Put your image files in two folders next to this index.html file:
+
+       index.html
+       training/   <- img (1).jpg ... img (21).jpg
+       testing/    <- img (1).jpg ... img (9).jpg
+
+   The lists below are generated automatically. To change how many images
+   appear, just change the two numbers (21 and 9).
+   ======================================================================= */
+
+function buildList(count){
+  const list = [];
+  for (let i = 1; i <= count; i++){
+    list.push("img (" + i + ").jpg");
+  }
+  return list;
+}
+
+const IMAGE_SETS = {
+  training: buildList(21),
+  testing:  buildList(9)
+};
+
+/* ===== Nothing below here needs changing ============================== */
+
+function normalise(entry){
+  return (typeof entry === "string") ? { file: entry, label: "" } : entry;
+}
+
+function makeCard(folder, entry){
+  const { file, label } = normalise(entry);
+  const src = folder + "/" + file;
+
+  const card = document.createElement("figure");
+  card.className = "card";
+
+  const thumb = document.createElement("div");
+  thumb.className = "thumb";
+
+  const img = document.createElement("img");
+  img.src = src;
+  img.alt = file;
+  img.loading = "lazy";
+  img.draggable = true;
+
+  // Make the drag carry the full image address so another tab can read it.
+  img.addEventListener("dragstart", function(e){
+    const url = img.src; // already an absolute address in the page
+    try {
+      e.dataTransfer.setData("text/uri-list", url);
+      e.dataTransfer.setData("text/plain", url);
+    } catch (err) { /* ignore */ }
+    e.dataTransfer.effectAllowed = "copy";
+  });
+
+  // If a file is missing or misnamed, say so plainly instead of a broken icon.
+  img.addEventListener("error", function(){
+    card.classList.add("missing");
+    const msg = document.createElement("div");
+    msg.className = "miss-msg";
+    msg.innerHTML = "Couldn't find<br><b>" + src + "</b>";
+    thumb.appendChild(msg);
+  });
+
+  const hint = document.createElement("span");
+  hint.className = "drag-hint";
+  hint.textContent = "drag →";
+
+  thumb.appendChild(img);
+
+  const cap = document.createElement("figcaption");
+  const name = document.createElement("span");
+  name.className = "name";
+  name.textContent = file;
+  cap.appendChild(name);
+  if (label){
+    const chip = document.createElement("span");
+    chip.className = "chip";
+    chip.textContent = label;
+    cap.appendChild(chip);
+  }
+
+  card.appendChild(thumb);
+  card.appendChild(cap);
+  card.appendChild(hint);
+  return card;
+}
+
+function renderSet(folder){
+  const grid = document.getElementById("grid-" + folder);
+  const items = IMAGE_SETS[folder] || [];
+  grid.innerHTML = "";
+
+  if (items.length === 0){
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.textContent = "No images listed yet. Add filenames in the script at the top of this file.";
+    grid.appendChild(empty);
+  } else {
+    items.forEach(function(entry){ grid.appendChild(makeCard(folder, entry)); });
+  }
+  document.getElementById("count-" + folder).textContent = items.length;
+}
+
+renderSet("training");
+renderSet("testing");
+
+// Set switcher
+const buttons = document.querySelectorAll(".switch button");
+const panels = document.querySelectorAll(".panel");
+buttons.forEach(function(btn){
+  btn.addEventListener("click", function(){
+    const set = btn.dataset.set;
+    buttons.forEach(function(b){ b.setAttribute("aria-pressed", String(b === btn)); });
+    panels.forEach(function(p){ p.classList.toggle("active", p.dataset.set === set); });
+  });
+});
+</script>
+</body>
+</html>
