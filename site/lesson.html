@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson</title>
+<link rel="stylesheet" href="style.css">
+<script src="config.js"></script>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="brand"><b id="lessonTitle">Lesson</b><span><a href="index.html">&larr; All lessons</a></span></div>
+    <div class="auth">
+      <span class="chip" id="saveChip">Not saved yet</span>
+      <button class="btn-primary" id="saveBtn">Save my work</button>
+      <button class="btn-ghost no-print" id="pdfBtn">Download as PDF</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="banner" id="signinBanner" hidden>
+    You're not signed in, so your work <b>will not save</b>.
+    <a href="index.html">Sign in on the home page</a> first, then come back.
+  </div>
+  <p class="hint" id="intro"></p>
+  <div id="blocks"></div>
+  <p class="print-note">Printed from the Computing lesson hub — interactive activities are not shown on paper.</p>
+</main>
+
+<script>
+const API = (window.HUB && window.HUB.WORKER_URL) || "";
+const token = localStorage.getItem("hub_token") || "";
+const $ = (id) => document.getElementById(id);
+const lessonId = new URLSearchParams(location.search).get("id") || "demo";
+const inputs = {};   // blockId -> element
+let lesson = null;
+
+if (!token) $("signinBanner").hidden = false;
+
+function setChip(state){
+  const c = $("saveChip");
+  c.dataset.state = state;
+  c.textContent = state==="saved" ? "Saved" : state==="saving" ? "Saving…" : state==="error" ? "Not saved" : "Not saved yet";
+}
+function el(tag, cls, html){ const e=document.createElement(tag); if(cls)e.className=cls; if(html!==undefined)e.innerHTML=html; return e; }
+function markDirty(){ setChip(""); }
+
+fetch("lessons/" + encodeURIComponent(lessonId) + ".json")
+  .then(r => { if(!r.ok) throw new Error(); return r.json(); })
+  .then(async (l) => {
+    lesson = l;
+    document.title = l.title;
+    $("lessonTitle").textContent = l.title;
+    $("intro").textContent = l.intro || "";
+    l.blocks.forEach(renderBlock);
+    if (token && API && API.indexOf("PASTE_")!==0) await loadSaved();
+  })
+  .catch(() => { $("blocks").innerHTML = '<p class="err">Could not load this lesson. Check the lesson id in the address bar.</p>'; });
+
+function renderBlock(b, i){
+  const box = $("blocks");
+  if (b.type === "text"){
+    const s = el("section","station"); s.appendChild(el("div","", b.html)); box.appendChild(s); return;
+  }
+  if (b.type === "question"){
+    const s = el("section","station");
+    s.appendChild(el("label","", b.prompt));
+    const ta = el("textarea"); ta.rows = 3; ta.placeholder = "Type your answer…"; ta.addEventListener("input", markDirty);
+    inputs[b.id] = ta; s.appendChild(ta);
+    if (b.criteria){
+      const row = el("div","row no-print");
+      const btn = el("button","btn-ghost","Check my answer with AI");
+      const err = el("span","err");
+      const fb = el("div","feedback"); fb.hidden = true;
+      btn.addEventListener("click", () => checkAnswer(b, ta, btn, fb, err));
+      row.appendChild(btn); row.appendChild(err);
+      s.appendChild(row); s.appendChild(fb);
+    }
+    box.appendChild(s); return;
+  }
+  if (b.type === "python"){
+    const s = el("section","station");
+    if (b.task) s.appendChild(el("p","hint", b.task));
+    const ta = el("textarea","code"); ta.spellcheck = false; ta.value = b.starter || ""; ta.addEventListener("input", markDirty);
+    inputs[b.id] = ta; s.appendChild(ta);
+    const row = el("div","row no-print");
+    const run = el("button","btn-primary","Run");
+    const err = el("span","err");
+    const out = el("div","output"); out.setAttribute("aria-live","polite");
+    run.addEventListener("click", () => runPython(ta.value, out, err));
+    row.appendChild(run); row.appendChild(err);
+    s.appendChild(row); s.appendChild(out);
+    box.appendChild(s); return;
+  }
+  if (b.type === "embed"){
+    const s = el("section","station");
+    if (b.title) s.appendChild(el("label","", b.title));
+    if (b.note) s.appendChild(el("p","hint", b.note));
+    const f = el("iframe","embed"); f.src = b.url; f.height = b.height || 420;
+    f.setAttribute("allowfullscreen",""); f.title = b.title || "Embedded activity";
+    s.appendChild(f);
+    box.appendChild(s); return;
+  }
+  if (b.type === "link"){
+    const s = el("section","station");
+    s.appendChild(el("label","", b.prompt || "Paste your project link"));
+    if (b.note) s.appendChild(el("p","hint", b.note));
+    const inp = el("input"); inp.type = "text"; inp.placeholder = "https://…"; inp.addEventListener("input", markDirty);
+    inputs[b.id] = inp; s.appendChild(inp);
+    box.appendChild(s); return;
+  }
+}
+
+/* ---- save & load ---- */
+async function loadSaved(){
+  try{
+    const r = await fetch(API + "/api/work?lesson=" + encodeURIComponent(lessonId), { headers: { Authorization: "Bearer " + token } });
+    const d = await r.json();
+    if (r.ok && d.data){
+      Object.entries(d.data).forEach(([id, val]) => { if (inputs[id]) inputs[id].value = val; });
+      setChip("saved");
+    }
+  }catch(e){ /* offline or not configured — student can still work */ }
+}
+$("saveBtn").addEventListener("click", async () => {
+  if (!token){ $("signinBanner").hidden = false; window.scrollTo({top:0, behavior:"smooth"}); return; }
+  if (!API || API.indexOf("PASTE_")===0){ setChip("error"); alert("The site isn't connected to its server yet (config.js)."); return; }
+  setChip("saving");
+  const data = {};
+  Object.entries(inputs).forEach(([id, elmt]) => { data[id] = elmt.value; });
+  try{
+    const r = await fetch(API + "/api/save", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json", Authorization:"Bearer " + token },
+      body: JSON.stringify({ lesson: lessonId, data })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || "Could not save.");
+    setChip("saved");
+  }catch(e){ setChip("error"); alert(e.message); }
+});
+$("pdfBtn").addEventListener("click", () => window.print());
+
+/* ---- AI checking ---- */
+async function checkAnswer(b, ta, btn, fb, err){
+  err.textContent = ""; fb.hidden = true;
+  if (!token){ err.textContent = "Sign in first so checks can be counted fairly."; return; }
+  if (!ta.value.trim()){ err.textContent = "Write an answer first."; return; }
+  btn.disabled = true; btn.textContent = "Checking…";
+  try{
+    const r = await fetch(API + "/api/check", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json", Authorization:"Bearer " + token },
+      body: JSON.stringify({ question: b.prompt.replace(/<[^>]*>/g," "), criteria: b.criteria, answer: ta.value })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || "Could not check right now.");
+    fb.dataset.verdict = d.verdict;
+    fb.innerHTML = "<b></b><span></span>";
+    fb.querySelector("b").textContent = d.verdict === "correct" ? "Looking good" : d.verdict === "partly" ? "Nearly there" : "Not quite yet";
+    fb.querySelector("span").textContent = d.feedback;
+    fb.hidden = false;
+  }catch(e){ err.textContent = e.message; }
+  btn.disabled = false; btn.textContent = "Check my answer with AI";
+}
+
+/* ---- Python (Pyodide, loaded on first Run) ---- */
+let pyodide = null, pyLoading = null;
+async function ensurePyodide(out){
+  if (pyodide) return pyodide;
+  if (!pyLoading){
+    out.textContent = "Loading Python… (first run only)";
+    pyLoading = new Promise((res, rej) => {
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js";
+      s.onload = res; s.onerror = () => rej(new Error("Could not load Python."));
+      document.head.appendChild(s);
+    }).then(() => loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.2/full/" }))
+      .then((p) => { pyodide = p; return p; });
+  }
+  return pyLoading;
+}
+async function runPython(code, out, err){
+  err.textContent = "";
+  try{
+    const py = await ensurePyodide(out);
+    py.globals.set("_user_code", code);
+    const result = py.runPython(
+      "import sys, io\n" +
+      "_buf = io.StringIO()\n" +
+      "_so, _se = sys.stdout, sys.stderr\n" +
+      "sys.stdout = sys.stderr = _buf\n" +
+      "try:\n" +
+      "    exec(compile(_user_code, '<student>', 'exec'), {})\n" +
+      "except Exception:\n" +
+      "    import traceback; traceback.print_exc()\n" +
+      "finally:\n" +
+      "    sys.stdout, sys.stderr = _so, _se\n" +
+      "_buf.getvalue()\n"
+    );
+    out.textContent = result && result.length ? result : "(no output)";
+  }catch(e){
+    out.textContent = "";
+    err.textContent = e.message || "Something went wrong running your code.";
+  }
+}
+</script>
+</body>
+</html>

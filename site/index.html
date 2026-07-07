@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Computing lesson hub</title>
+<link rel="stylesheet" href="style.css">
+<script src="config.js"></script>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="brand"><b>Computing lesson hub</b><span>Sign in, pick a lesson, everything saves</span></div>
+    <div class="auth" id="auth" aria-live="polite"></div>
+  </div>
+</header>
+
+<main>
+  <section class="station" id="loginCard">
+    <h2 style="margin-top:0">Sign in</h2>
+    <p class="hint" style="margin-top:0">Use the class code, username and PIN your teacher gave you.</p>
+    <div class="grid3">
+      <div><label for="classCode">Class code</label><input type="text" id="classCode" autocomplete="off" placeholder="e.g. 9B-CS"></div>
+      <div><label for="username">Username</label><input type="text" id="username" autocomplete="off" placeholder="e.g. jsmith"></div>
+      <div><label for="pin">PIN</label><input type="password" id="pin" inputmode="numeric" autocomplete="off" placeholder="e.g. 4821"></div>
+    </div>
+    <div class="row">
+      <button class="btn-primary" id="loginBtn">Sign in</button>
+      <span class="err" id="loginErr" role="alert"></span>
+    </div>
+  </section>
+
+  <section>
+    <h2>Lessons</h2>
+    <div id="lessonList" class="lessons"><p class="hint">Loading lessons…</p></div>
+  </section>
+</main>
+
+<script>
+const API = (window.HUB && window.HUB.WORKER_URL) || "";
+const $ = (id) => document.getElementById(id);
+
+function renderAuth() {
+  const name = localStorage.getItem("hub_name");
+  if (name && localStorage.getItem("hub_token")) {
+    $("auth").innerHTML = '<span class="who">Signed in as <b></b></span> <button class="btn-ghost" id="outBtn">Sign out</button>';
+    $("auth").querySelector("b").textContent = name;
+    $("outBtn").addEventListener("click", () => {
+      localStorage.removeItem("hub_token"); localStorage.removeItem("hub_name"); renderAuth();
+      $("loginCard").hidden = false;
+    });
+    $("loginCard").hidden = true;
+  } else {
+    $("auth").innerHTML = '<span class="who">Not signed in</span>';
+    $("loginCard").hidden = false;
+  }
+}
+renderAuth();
+
+$("loginBtn").addEventListener("click", async () => {
+  $("loginErr").textContent = "";
+  if (!API || API.indexOf("PASTE_") === 0) { $("loginErr").textContent = "The site isn't connected to its server yet (config.js)."; return; }
+  try {
+    const r = await fetch(API + "/api/login", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ classCode: $("classCode").value, username: $("username").value, pin: $("pin").value })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || "Sign-in failed.");
+    localStorage.setItem("hub_token", d.token);
+    localStorage.setItem("hub_name", d.name);
+    renderAuth();
+  } catch (e) { $("loginErr").textContent = e.message; }
+});
+$("pin").addEventListener("keydown", (e) => { if (e.key === "Enter") $("loginBtn").click(); });
+
+fetch("lessons/index.json").then(r => r.json()).then(list => {
+  const box = $("lessonList"); box.innerHTML = "";
+  list.forEach(l => {
+    const a = document.createElement("a");
+    a.className = "lessonCard"; a.href = "lesson.html?id=" + encodeURIComponent(l.id);
+    a.innerHTML = "<b></b><span></span>";
+    a.querySelector("b").textContent = l.title;
+    a.querySelector("span").textContent = l.description || "";
+    box.appendChild(a);
+  });
+  if (!list.length) box.innerHTML = '<p class="hint">No lessons yet — add one to the lessons folder.</p>';
+}).catch(() => { $("lessonList").innerHTML = '<p class="hint">Could not load lessons/index.json.</p>'; });
+</script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+{
+  "title": "Variables and loops (demo lesson)",
+  "intro": "Work through each activity in order. Press Save my work regularly — the chip at the top shows whether your latest changes are saved.",
+  "blocks": [
+    {
+      "type": "text",
+      "html": "<h2 style='margin-top:0'>Starter</h2><p>A <b>variable</b> is a named space in memory that stores a value. A <b>loop</b> repeats instructions. Answer the questions below, then try the code.</p>"
+    },
+    {
+      "type": "question",
+      "id": "q1",
+      "prompt": "1. In your own words, what is a variable?",
+      "criteria": "A good answer says a variable is a named location/space in memory that stores a value, and ideally that the value can change while the program runs."
+    },
+    {
+      "type": "question",
+      "id": "q2",
+      "prompt": "2. Why is a for loop better than copying and pasting the same line five times?",
+      "criteria": "A good answer mentions less repeated code, easier to change (edit once), fewer mistakes, and that the number of repeats can be controlled by a value/variable."
+    },
+    {
+      "type": "python",
+      "id": "py1",
+      "task": "Run this program, then change it so it adds up the numbers 1 to 100 instead of the prices.",
+      "starter": "prices = [3, 5, 2, 8]\ntotal = 0\nfor p in prices:\n    total = total + p\nprint(\"Total:\", total)"
+    },
+    {
+      "type": "text",
+      "html": "<h2 style='margin-top:0'>Main task — Scratch</h2><p>Open the Scratch editor and make a sprite that moves right when you press the space bar. The example below shows the kind of thing you're aiming for.</p><p><a href='https://scratch.mit.edu/projects/editor/' target='_blank' rel='noopener'>Open the Scratch editor in a new tab</a></p>"
+    },
+    {
+      "type": "link",
+      "id": "scratch1",
+      "prompt": "Paste the share link to your finished Scratch project",
+      "note": "In Scratch choose Share, then copy the address of your project page and paste it here. Then press Save my work."
+    }
+  ]
+}

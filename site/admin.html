@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Teacher admin — lesson hub</title>
+<link rel="stylesheet" href="style.css">
+<script src="config.js"></script>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="brand"><b>Teacher admin</b><span><a href="index.html">&larr; Back to hub</a></span></div>
+  </div>
+</header>
+
+<main>
+  <section class="station">
+    <label for="tkey">Teacher key</label>
+    <p class="hint" style="margin-top:0">The TEACHER_KEY secret you set in Cloudflare. It stays on this device only until you close the tab.</p>
+    <input type="password" id="tkey" autocomplete="off">
+  </section>
+
+  <section class="station">
+    <h2 style="margin-top:0">Add or update students</h2>
+    <p class="hint" style="margin-top:0">One student per line: <b>class code, username, PIN, display name</b>.
+       Re-adding an existing student updates their PIN — handy for resets. Use first names or initials only.</p>
+    <textarea id="csv" rows="6" placeholder="9B-CS, jsmith, 4821, Jamie S&#10;9B-CS, apatel, 7359, Anya P"></textarea>
+    <div class="row">
+      <button class="btn-primary" id="addBtn">Add students</button>
+      <span class="hint" id="addMsg"></span>
+      <span class="err" id="addErr"></span>
+    </div>
+  </section>
+
+  <section class="station">
+    <h2 style="margin-top:0">View saved work</h2>
+    <div class="grid3">
+      <div><label for="lessonId">Lesson id (blank = latest 500 saves)</label><input type="text" id="lessonId" placeholder="e.g. demo"></div>
+    </div>
+    <div class="row">
+      <button class="btn-primary" id="viewBtn">Load work</button>
+      <span class="err" id="viewErr"></span>
+    </div>
+    <div id="results" style="margin-top:18px"></div>
+  </section>
+</main>
+
+<script>
+const API = (window.HUB && window.HUB.WORKER_URL) || "";
+const $ = (id) => document.getElementById(id);
+$("tkey").value = sessionStorage.getItem("hub_tkey") || "";
+$("tkey").addEventListener("input", () => sessionStorage.setItem("hub_tkey", $("tkey").value));
+
+$("addBtn").addEventListener("click", async () => {
+  $("addErr").textContent = ""; $("addMsg").textContent = "";
+  const students = $("csv").value.split("\n").map(line => {
+    const [classCode, username, pin, ...rest] = line.split(",").map(s => (s||"").trim());
+    return { classCode, username, pin, displayName: rest.join(", ") };
+  }).filter(s => s.classCode && s.username && s.pin);
+  if (!students.length){ $("addErr").textContent = "Nothing to add — check the format."; return; }
+  try{
+    const r = await fetch(API + "/api/teacher/students", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json", "X-Teacher-Key": $("tkey").value },
+      body: JSON.stringify({ students })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || "Failed.");
+    $("addMsg").textContent = d.added + " student(s) added or updated.";
+  }catch(e){ $("addErr").textContent = e.message; }
+});
+
+$("viewBtn").addEventListener("click", async () => {
+  $("viewErr").textContent = ""; $("results").innerHTML = "";
+  try{
+    const q = $("lessonId").value.trim();
+    const r = await fetch(API + "/api/teacher/work" + (q ? "?lesson=" + encodeURIComponent(q) : ""), {
+      headers: { "X-Teacher-Key": $("tkey").value }
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || "Failed.");
+    if (!d.rows.length){ $("results").innerHTML = '<p class="hint">No saved work found.</p>'; return; }
+    const table = document.createElement("table");
+    table.innerHTML = "<thead><tr><th>Class</th><th>Student</th><th>Lesson</th><th>Last saved (UTC)</th><th>Work</th></tr></thead>";
+    const tb = document.createElement("tbody");
+    d.rows.forEach(row => {
+      const tr = document.createElement("tr");
+      const cells = [row.class_code, row.display_name, row.lesson_id, row.updated_at];
+      cells.forEach(c => { const td = document.createElement("td"); td.textContent = c; tr.appendChild(td); });
+      const td = document.createElement("td");
+      const det = document.createElement("details"); det.className = "answers";
+      const sum = document.createElement("summary"); sum.textContent = "Open"; det.appendChild(sum);
+      Object.entries(row.data).forEach(([k, v]) => {
+        const pre = document.createElement("pre"); pre.textContent = k + ":\n" + v; det.appendChild(pre);
+      });
+      td.appendChild(det); tr.appendChild(td); tb.appendChild(tr);
+    });
+    table.appendChild(tb);
+    $("results").appendChild(table);
+  }catch(e){ $("viewErr").textContent = e.message; }
+});
+</script>
+</body>
+</html>
