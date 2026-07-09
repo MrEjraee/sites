@@ -88,16 +88,25 @@ document.addEventListener("visibilitychange", () => { if (document.visibilitySta
 
 /* ---------- load lesson ---------- */
 fetch("lessons/" + encodeURIComponent(lessonId) + ".json")
-  .then(r => { if(!r.ok) throw new Error(); return r.json(); })
+  .then(r => {
+    if (!r.ok) throw new Error("missing");
+    return r.json().catch(() => { throw new Error("badjson"); });
+  })
   .then(async (l) => {
     lesson = l;
     document.title = l.title;
     $("lessonTitle").textContent = l.title;
     $("intro").textContent = l.intro || "";
-    l.blocks.forEach(renderBlock);
+    l.blocks.forEach(renderBlock);   // each block is isolated, see renderBlock
     if (token && API && API.indexOf("PASTE_")!==0) await loadSaved();
   })
-  .catch(() => { $("blocks").innerHTML = '<p class="err">Could not load this lesson. Check the lesson id in the address bar.</p>'; });
+  .catch((e) => {
+    $("blocks").innerHTML = e.message === "missing"
+      ? '<p class="err">Could not find this lesson. Check the lesson id in the address bar.</p>'
+      : e.message === "badjson"
+      ? '<p class="err">This lesson file has a typo in it and could not be read.</p>'
+      : '<p class="err">Something went wrong displaying this lesson. Please tell your teacher.</p>';
+  });
 
 async function loadSaved(){
   try{
@@ -117,11 +126,20 @@ function strHash(s){ let x = 5381; for (const c of s) x = ((x << 5) + x + c.char
 function normLetters(s){ return (s || "").toUpperCase().replace(/[^A-Z]/g, ""); }
 
 /* ---------- block renderers ---------- */
-function renderBlock(b){
+function renderBlock(b, i){
   const box = $("blocks");
   const R = { text:rText, question:rQuestion, python:rPython, embed:rEmbed, link:rLink,
               quiz:rQuiz, password:rPassword, caesar:rCaesar }[b.type];
-  if (R) box.appendChild(R(b));
+  if (!R){ console.warn("Unknown block type:", b.type); return; }
+  try {
+    box.appendChild(R(b));
+  } catch (err) {
+    // One faulty block must never take the whole lesson down with it.
+    console.error("Block " + (i+1) + " (" + b.type + ") failed:", err);
+    const s = el("section","station");
+    s.appendChild(el("p","err", "This activity could not be displayed. Carry on with the rest of the lesson and tell your teacher."));
+    box.appendChild(s);
+  }
 }
 
 function rText(b){ const s = el("section","station"); s.appendChild(el("div","", b.html)); return s; }
@@ -299,7 +317,9 @@ function rCaesar(b){
   s.appendChild(el("div","cipher-text", b.ciphertext));
 
   const row = el("div","row no-print");
-  const lbl = el("label","", "Shift: <b id='" + b.id + "-sv'>0</b>");
+  const lbl = el("label","", "Shift: ");
+  const shiftVal = el("b","", "0");        // kept as a direct reference
+  lbl.appendChild(shiftVal);
   lbl.style.margin = "0";
   const slider = el("input"); slider.type = "range"; slider.min = "0"; slider.max = "25"; slider.value = "0";
   slider.style.maxWidth = "260px";
@@ -317,7 +337,7 @@ function rCaesar(b){
   }
   function redraw(){
     const k = parseInt(slider.value, 10);
-    document.getElementById(b.id + "-sv").textContent = k;
+    shiftVal.textContent = k;
     out.textContent = shiftBy(b.ciphertext, k);
   }
   slider.addEventListener("input", () => { redraw(); markDirty(); });
