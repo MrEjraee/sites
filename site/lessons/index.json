@@ -3,5 +3,10 @@
     "id": "demo",
     "title": "Variables and loops (demo lesson)",
     "description": "Warm-up questions with AI checking, a Python task, and a Scratch activity."
+  },
+  {
+    "id": "app-design",
+    "title": "App Design One-Off",
+    "description": "One off focussing on App Design"
   }
 ]
