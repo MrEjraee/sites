@@ -8,84 +8,97 @@
 <script src="config.js"></script>
 </head>
 <body>
-<header>
-  <div class="bar">
-    <div class="brand"><b>Computing lesson hub</b><span>Sign in, pick a lesson, everything saves</span></div>
-    <div class="auth" id="auth" aria-live="polite"></div>
-  </div>
-</header>
 
-<main>
+<div class="homebar">
+  <div class="title">Computing hub</div>
+  <div class="auth" id="auth" aria-live="polite"></div>
+</div>
+
+<div class="page">
+
+  <div class="masthead">
+    <p class="eyebrow">Computing</p>
+    <h1 id="headline">Sign in to start</h1>
+    <p id="subline">Your work saves as you go, so you can pick up exactly where you left off.</p>
+  </div>
+
   <section class="station" id="loginCard">
-    <h2 style="margin-top:0">Sign in</h2>
-    <p class="hint" style="margin-top:0">Use the class code, username and PIN your teacher gave you.</p>
     <div class="grid3">
-      <div><label for="classCode">Class code</label><input type="text" id="classCode" autocomplete="off" placeholder="e.g. 9B-CS"></div>
-      <div><label for="username">Username</label><input type="text" id="username" autocomplete="off" placeholder="e.g. jsmith"></div>
-      <div><label for="pin">PIN</label><input type="password" id="pin" inputmode="numeric" autocomplete="off" placeholder="e.g. 4821"></div>
+      <div>
+        <label for="username">Username</label>
+        <input type="text" id="username" autocomplete="username" placeholder="e.g. jsmith">
+      </div>
+      <div>
+        <label for="pin">Password</label>
+        <input type="password" id="pin" autocomplete="current-password" placeholder="Your password">
+      </div>
     </div>
-    <div class="row">
+    <div class="row" style="margin-top:18px">
       <button class="btn-primary" id="loginBtn">Sign in</button>
       <span class="err" id="loginErr" role="alert"></span>
     </div>
+    <p class="hint" style="margin:16px 0 0">Forgotten your password? Ask your teacher to reset it.</p>
   </section>
 
-  <section>
-    <h2>Lessons</h2>
-    <div id="lessonList" class="lessons"><p class="hint">Loading lessons…</p></div>
-  </section>
-</main>
+  <h2 style="margin:36px 0 16px; font-size:22px">Lessons</h2>
+  <div id="lessonList" class="lessons"><p class="hint">Loading lessons…</p></div>
+
+</div>
 
 <script>
 const API = (window.HUB && window.HUB.WORKER_URL) || "";
 const $ = (id) => document.getElementById(id);
 
-function renderAuth() {
+function renderAuth(){
   const name = localStorage.getItem("hub_name");
-  if (name && localStorage.getItem("hub_token")) {
+  if (name && localStorage.getItem("hub_token")){
     $("auth").innerHTML = '<span class="who">Signed in as <b></b></span> <button class="btn-ghost" id="outBtn">Sign out</button>';
     $("auth").querySelector("b").textContent = name;
     $("outBtn").addEventListener("click", () => {
       localStorage.removeItem("hub_token"); localStorage.removeItem("hub_name"); renderAuth();
-      $("loginCard").hidden = false;
     });
     $("loginCard").hidden = true;
+    $("headline").textContent = "Welcome back, " + name.split(" ")[0] + ".";
+    $("subline").textContent = "Pick a lesson below. Everything you type saves by itself.";
   } else {
     $("auth").innerHTML = '<span class="who">Not signed in</span>';
     $("loginCard").hidden = false;
+    $("headline").textContent = "Sign in to start";
+    $("subline").textContent = "Your work saves as you go, so you can pick up exactly where you left off.";
   }
 }
 renderAuth();
 
 $("loginBtn").addEventListener("click", async () => {
   $("loginErr").textContent = "";
-  if (!API || API.indexOf("PASTE_") === 0) { $("loginErr").textContent = "The site isn't connected to its server yet (config.js)."; return; }
-  try {
+  if (!API || API.indexOf("PASTE_") === 0){ $("loginErr").textContent = "This site isn't connected to its server yet."; return; }
+  try{
     const r = await fetch(API + "/api/login", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ classCode: $("classCode").value, username: $("username").value, pin: $("pin").value })
+      method:"POST", headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ username: $("username").value, password: $("pin").value, pin: $("pin").value })
     });
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || "Sign-in failed.");
     localStorage.setItem("hub_token", d.token);
     localStorage.setItem("hub_name", d.name);
     renderAuth();
-  } catch (e) { $("loginErr").textContent = e.message; }
+  }catch(e){ $("loginErr").textContent = e.message; }
 });
 $("pin").addEventListener("keydown", (e) => { if (e.key === "Enter") $("loginBtn").click(); });
 
 fetch("lessons/index.json").then(r => r.json()).then(list => {
   const box = $("lessonList"); box.innerHTML = "";
-  list.forEach(l => {
+  list.forEach((l, i) => {
     const a = document.createElement("a");
     a.className = "lessonCard"; a.href = "lesson.html?id=" + encodeURIComponent(l.id);
-    a.innerHTML = "<b></b><span></span>";
+    a.innerHTML = '<span class="num">' + String(i+1).padStart(2,"0") + '</span>' +
+                  '<span class="body"><b></b><span></span></span><span class="go">&rarr;</span>';
     a.querySelector("b").textContent = l.title;
-    a.querySelector("span").textContent = l.description || "";
+    a.querySelector(".body span").textContent = l.description || "";
     box.appendChild(a);
   });
-  if (!list.length) box.innerHTML = '<p class="hint">No lessons yet — add one to the lessons folder.</p>';
-}).catch(() => { $("lessonList").innerHTML = '<p class="hint">Could not load lessons/index.json.</p>'; });
+  if (!list.length) box.innerHTML = '<p class="hint">No lessons yet.</p>';
+}).catch(() => { $("lessonList").innerHTML = '<p class="hint">Could not load the lesson list.</p>'; });
 </script>
 </body>
 </html>

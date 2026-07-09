@@ -7,44 +7,44 @@
 <link rel="stylesheet" href="style.css">
 <script src="config.js"></script>
 </head>
-<body class="lesson-page">
-<header>
-  <div class="bar">
-    <div class="brand">
-      <b id="lessonTitle">Lesson</b>
-      <span><a href="index.html">&larr; All lessons</a></span>
-    </div>
-    <div class="auth">
-      <span class="stepcount" id="stepCount"></span>
-      <span class="chip" id="saveChip">Not saved yet</span>
-      <button class="btn-ghost no-print" id="pdfBtn">Download as PDF</button>
-    </div>
-  </div>
-  <div class="progress no-print"><div class="progress-bar" id="progressBar"></div></div>
-</header>
+<body class="lesson">
 
-<main>
+<div class="topbar">
+  <a class="home" href="index.html">&larr; All lessons</a>
+  <span class="sep">/</span>
+  <div class="title" id="lessonTitle">Lesson</div>
+  <span class="chip" id="saveChip">Not saved yet</span>
+  <button class="btn-ghost no-print" id="pdfBtn">PDF</button>
+</div>
+
+<div class="tracker" id="tracker" aria-hidden="true"></div>
+<div class="trackmeta">
+  <span id="stepCount">Step 1</span>
+  <span class="now-label" id="stageName"></span>
+</div>
+
+<div class="brief">
+  <p class="eyebrow" id="briefEyebrow">Your task</p>
+  <h2 id="briefTitle"></h2>
+  <p id="briefText"></p>
+</div>
+
+<div class="stage" id="stage">
   <div class="banner" id="signinBanner" hidden>
     You're not signed in, so your work <b>will not save</b>.
-    <a href="index.html">Sign in on the home page</a> first, then come back.
+    <a href="index.html">Sign in on the home page</a>, then come back.
   </div>
-
   <div id="blocks"></div>
+</div>
 
-  <nav class="stepnav no-print" id="stepNav">
-    <button class="btn-ghost" id="backBtn">&larr; Back</button>
-    <div class="navmid">
-      <p class="lockmsg" id="lockMsg" aria-live="polite"></p>
-    </div>
-    <button class="btn-primary btn-big" id="nextBtn">Continue &rarr;</button>
-  </nav>
-
-  <div class="footnote no-print">
-    <span id="bypassDot" role="button" tabindex="0" aria-label="Teacher options" title=" ">&#183;</span>
+<div class="dock">
+  <button class="btn-ghost" id="backBtn">&larr; Back</button>
+  <div class="mid">
+    <p class="lockmsg" id="lockMsg" aria-live="polite"></p>
   </div>
-
-  <p class="print-note">Printed from the Computing lesson hub — interactive activities are not shown on paper.</p>
-</main>
+  <span id="bypassDot" role="button" tabindex="0" aria-label="Teacher options">&#183;</span>
+  <button class="btn-primary btn-continue" id="nextBtn">Continue &rarr;</button>
+</div>
 
 <script>
 const API = (window.HUB && window.HUB.WORKER_URL) || "";
@@ -52,11 +52,9 @@ const token = localStorage.getItem("hub_token") || "";
 const $ = (id) => document.getElementById(id);
 const lessonId = new URLSearchParams(location.search).get("id") || "demo";
 
-const fields = {};        // id -> { get, set }
-const steps  = [];        // { section, check() }
-let step = 0;
-let bypassed = false;
-let lesson = null;
+const fields = {};   // id -> { get, set }
+const steps  = [];   // { section, check(), brief:{eyebrow,title,text} }
+let step = 0, bypassed = false, lesson = null;
 
 if (!token) $("signinBanner").hidden = false;
 
@@ -64,13 +62,14 @@ function el(tag, cls, html){ const e=document.createElement(tag); if(cls)e.class
 function setChip(state){
   const c = $("saveChip");
   c.dataset.state = state;
-  c.textContent = state==="saved" ? "Saved" : state==="saving" ? "Saving…" : state==="error" ? "Not saved" : "Not saved yet";
+  c.textContent = state==="saved" ? "Saved" : state==="saving" ? "Saving" : state==="error" ? "Not saved" : "Not saved";
 }
 function strHash(s){ let x = 5381; for (const c of s) x = ((x << 5) + x + c.charCodeAt(0)) >>> 0; return x; }
 function normLetters(s){ return (s || "").toUpperCase().replace(/[^A-Z]/g, ""); }
 function wordCount(s){ return (s || "").trim().split(/\s+/).filter(Boolean).length; }
+function stripTags(s){ return String(s || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim(); }
 
-/* ---------- autosave: debounced, deduplicated, rate-limit friendly ---------- */
+/* ---------- autosave: debounced, deduplicated ---------- */
 const AUTOSAVE_DELAY = 2500, MIN_GAP = 6000;
 let saveTimer = null, lastSent = "", lastSaveAt = 0, saving = false;
 
@@ -112,22 +111,18 @@ fetch("lessons/" + encodeURIComponent(lessonId) + ".json")
     lesson = l;
     document.title = l.title;
     $("lessonTitle").textContent = l.title;
-    if (l.intro){
-      const s = el("section","station intro-station");
-      s.appendChild(el("p","lead", l.intro));
-      $("blocks").appendChild(s);
-    }
     l.blocks.forEach(renderBlock);
+    buildTracker();
     if (token && API && API.indexOf("PASTE_")!==0) await loadSaved();
-    showStep(step, true);
+    showStep(step);
   })
   .catch((e) => {
-    $("stepNav").hidden = true;
-    $("blocks").innerHTML = e.message === "missing"
-      ? '<p class="err">Could not find this lesson. Check the lesson id in the address bar.</p>'
-      : e.message === "badjson"
-      ? '<p class="err">This lesson file has a typo in it and could not be read.</p>'
-      : '<p class="err">Something went wrong displaying this lesson. Please tell your teacher.</p>';
+    $("blocks").innerHTML = '<section class="station"><p class="err">' + (
+      e.message === "missing" ? "Could not find this lesson. Check the lesson id in the address bar."
+      : e.message === "badjson" ? "This lesson file has a typo in it and could not be read."
+      : "Something went wrong displaying this lesson. Please tell your teacher.") + '</p></section>';
+    $("briefTitle").textContent = "This lesson could not open";
+    $("nextBtn").disabled = true;
   });
 
 async function loadSaved(){
@@ -140,53 +135,73 @@ async function loadSaved(){
       lastSent = JSON.stringify(snapshot());
       setChip("saved");
     }
-  }catch(e){ /* offline — student can still work */ }
+  }catch(e){ /* offline — work continues locally */ }
 }
 
-/* ---------- one activity per page ---------- */
-function showStep(i, jump){
+/* ---------- shell ---------- */
+function buildTracker(){
+  const t = $("tracker"); t.innerHTML = "";
+  steps.forEach(() => t.appendChild(el("div","seg")));
+}
+function showStep(i){
   step = Math.min(Math.max(i, 0), steps.length - 1);
   steps.forEach((s, n) => { s.section.hidden = (n !== step); });
+
+  Array.from($("tracker").children).forEach((seg, n) => {
+    seg.className = "seg" + (n < step ? " done" : n === step ? " now" : "");
+  });
+
+  const b = steps[step].brief;
+  $("briefEyebrow").textContent = b.eyebrow || "Your task";
+  $("briefTitle").textContent = b.title || "";
+  $("briefText").textContent = b.text || "";
+  $("briefText").hidden = !b.text;
+
   $("stepCount").textContent = "Step " + (step + 1) + " of " + steps.length;
-  $("progressBar").style.width = (((step) / (steps.length - 1)) * 100) + "%";
+  $("stageName").textContent = step === steps.length - 1 ? "Final step" : "";
   $("backBtn").disabled = step === 0;
-  const last = step === steps.length - 1;
-  $("nextBtn").textContent = last ? "Finish 🏁" : "Continue →";
+  $("nextBtn").textContent = step === steps.length - 1 ? "Finish 🏁" : "Continue →";
+  $("stage").scrollTop = 0;
   refreshGate();
-  if (!jump) window.scrollTo({ top: 0, behavior: "smooth" });
 }
 function refreshGate(){
   const s = steps[step];
   if (!s) return;
-  const res = bypassed ? { ok: true } : s.check();
+  const res = bypassed ? { ok:true } : s.check();
   $("nextBtn").disabled = !res.ok;
   $("lockMsg").textContent = res.ok ? "" : (res.message || "Finish this activity to continue.");
   $("lockMsg").hidden = res.ok;
 }
 $("backBtn").addEventListener("click", () => showStep(step - 1));
 $("nextBtn").addEventListener("click", () => {
-  if (step === steps.length - 1){ save(); alert("Well done — you have finished the lesson. Your work is saved."); return; }
+  if (step === steps.length - 1){
+    save();
+    $("briefEyebrow").textContent = "Complete";
+    $("briefTitle").textContent = "Lesson finished. Well done.";
+    $("briefText").textContent = "Your work is saved. You can use Back to look over anything again.";
+    $("nextBtn").disabled = true;
+    return;
+  }
   showStep(step + 1);
 });
 
-/* ---------- bypass: a deliberately dull dot in the corner ---------- */
+/* ---------- bypass ---------- */
 $("bypassDot").addEventListener("click", askBypass);
 $("bypassDot").addEventListener("keydown", (e) => { if (e.key === "Enter") askBypass(); });
 function askBypass(){
   const code = prompt("Enter code:");
   if (code === null) return;
-  const wanted = (lesson && lesson.bypassHash) || 2667650483; // default code: SKIP-2026
+  const wanted = (lesson && lesson.bypassHash) || 2667650483; // default: SKIP-2026
   if (strHash(code.trim()) === wanted){
     bypassed = true;
     document.body.classList.add("bypassed");
     refreshGate();
-    alert("Skipping unlocked for this lesson. You can now move between all activities freely.");
   } else {
     alert("That code is not right.");
   }
 }
 
-/* ---------- renderers: each returns { section, check } ---------- */
+/* ---------- renderers: { section, check, brief } ---------- */
 function renderBlock(b, i){
   const R = { text:rText, question:rQuestion, python:rPython, embed:rEmbed, link:rLink,
               quiz:rQuiz, password:rPassword, caesar:rCaesar }[b.type];
@@ -197,168 +212,174 @@ function renderBlock(b, i){
     console.error("Block " + (i+1) + " (" + b.type + ") failed:", err);
     const s = el("section","station");
     s.appendChild(el("p","err","This activity could not be displayed. Continue and tell your teacher."));
-    built = { section: s, check: () => ({ ok: true }) };
+    built = { section:s, check:() => ({ ok:true }), brief:{ eyebrow:"Notice", title:"Activity unavailable", text:"" } };
   }
   built.section.hidden = true;
   $("blocks").appendChild(built.section);
   steps.push(built);
 }
 
+/* text: the html is the content; the brief carries the heading */
 function rText(b){
-  const s = el("section","station");
-  s.appendChild(el("div","prose", b.html));
-  return { section: s, check: () => ({ ok: true }) };
+  const s = el("section");
+  const div = el("div","prose", b.html);
+  const h = div.querySelector("h2");
+  const title = h ? h.textContent : "Read this";
+  if (h) h.remove();
+  s.appendChild(div);
+  return { section:s, check:() => ({ ok:true }),
+           brief:{ eyebrow:"Read", title, text:"Read the page, then press Continue." } };
 }
 
 function rEmbed(b){
-  const s = el("section","station");
-  if (b.title) s.appendChild(el("h2","step-title", b.title));
-  if (b.note) s.appendChild(el("p","lead", b.note));
-  const f = el("iframe","embed"); f.src = b.url; f.height = b.height || 460;
-  f.setAttribute("allowfullscreen",""); f.title = b.title || "Embedded activity";
+  const s = el("section");
+  const f = el("iframe","embed"); f.src = b.url; f.setAttribute("allowfullscreen","");
+  f.title = b.title || "Video";
   s.appendChild(f);
-
   const done = el("label","confirm");
   const cb = el("input"); cb.type = "checkbox";
   cb.addEventListener("change", markDirty);
-  done.appendChild(cb);
-  done.appendChild(el("span","","I have watched the whole video"));
+  done.appendChild(cb); done.appendChild(el("span","","I have watched the whole video"));
   s.appendChild(done);
-
-  if (b.id) fields[b.id] = { get: () => cb.checked, set: (v) => { cb.checked = !!v; } };
-  return { section: s, check: () => cb.checked ? { ok: true } : { ok: false, message: "Watch the video, then tick the box to continue." } };
+  if (b.id) fields[b.id] = { get:() => cb.checked, set:(v) => { cb.checked = !!v; } };
+  return { section:s,
+           check:() => cb.checked ? { ok:true } : { ok:false, message:"Tick the box once you have watched it" },
+           brief:{ eyebrow:"Watch", title:stripTags(b.title) || "Watch the video", text:b.note || "Headphones on. Watch it all, then tick the box below." } };
 }
 
 function rQuestion(b){
-  const s = el("section","station");
-  s.appendChild(el("h2","step-title","Your answer"));
-  s.appendChild(el("p","lead", b.prompt));
+  const s = el("section");
   const min = b.minWords || 8;
-  const ta = el("textarea"); ta.rows = 5; ta.placeholder = "Type your answer here…";
+  const ta = el("textarea","answer"); ta.rows = 6; ta.placeholder = "Type your answer here…";
   const counter = el("p","counter");
   function tick(){
     const n = wordCount(ta.value);
-    counter.textContent = n + " word" + (n===1?"":"s") + (n < min ? " — write at least " + min : " ✓");
+    counter.textContent = n + " word" + (n===1?"":"s") + (n < min ? " · write at least " + min : " · long enough ✓");
     counter.dataset.ok = n >= min;
   }
   ta.addEventListener("input", () => { tick(); markDirty(); });
-  fields[b.id] = { get: () => ta.value, set: (v) => { ta.value = v || ""; tick(); } };
+  fields[b.id] = { get:() => ta.value, set:(v) => { ta.value = v || ""; tick(); } };
   s.appendChild(ta); s.appendChild(counter); tick();
-  return { section: s, check: () => wordCount(ta.value) >= min
-    ? { ok: true } : { ok: false, message: "Write at least " + min + " words to continue." } };
+  return { section:s,
+           check:() => wordCount(ta.value) >= min ? { ok:true } : { ok:false, message:"Write at least " + min + " words" },
+           brief:{ eyebrow:"Answer", title:"Write your answer", text:stripTags(b.prompt) } };
 }
 
 function rLink(b){
-  const s = el("section","station");
-  s.appendChild(el("h2","step-title", b.prompt || "Paste your link"));
-  if (b.note) s.appendChild(el("p","lead", b.note));
+  const s = el("section");
   const inp = el("input"); inp.type = "text"; inp.placeholder = "https://…";
   inp.addEventListener("input", markDirty);
-  fields[b.id] = { get: () => inp.value, set: (v) => { inp.value = v || ""; } };
+  fields[b.id] = { get:() => inp.value, set:(v) => { inp.value = v || ""; } };
   s.appendChild(inp);
-  return { section: s, check: () => /^https?:\/\/\S+\.\S+/.test(inp.value.trim())
-    ? { ok: true } : { ok: false, message: "Paste a link starting with https:// to continue." } };
+  if (b.note) s.appendChild(el("p","hint", b.note));
+  return { section:s,
+           check:() => /^https?:\/\/\S+\.\S+/.test(inp.value.trim()) ? { ok:true } : { ok:false, message:"Paste a link starting with https://" },
+           brief:{ eyebrow:"Hand in", title:stripTags(b.prompt) || "Paste your link", text:"" } };
 }
 
 function rPython(b){
-  const s = el("section","station");
-  s.appendChild(el("h2","step-title","Python"));
-  if (b.task) s.appendChild(el("p","lead", b.task));
+  const s = el("section");
   const ta = el("textarea","code"); ta.spellcheck = false; ta.value = b.starter || "";
   ta.addEventListener("input", markDirty);
-  fields[b.id] = { get: () => ta.value, set: (v) => { if (v) ta.value = v; } };
+  fields[b.id] = { get:() => ta.value, set:(v) => { if (v) ta.value = v; } };
   s.appendChild(ta);
-  const row = el("div","row no-print");
+  const row = el("div","row no-print"); row.style.marginTop = "14px";
   const run = el("button","btn-primary","Run"); const err = el("span","err");
   const out = el("div","output"); out.setAttribute("aria-live","polite");
   let ran = false;
   run.addEventListener("click", async () => { await runPython(ta.value, out, err); ran = true; markDirty(); });
   row.appendChild(run); row.appendChild(err);
   s.appendChild(row); s.appendChild(out);
-  return { section: s, check: () => ran ? { ok: true } : { ok: false, message: "Press Run at least once to continue." } };
+  return { section:s,
+           check:() => ran ? { ok:true } : { ok:false, message:"Press Run at least once" },
+           brief:{ eyebrow:"Code", title:"Python", text:b.task || "Read the code, run it, then change it." } };
 }
 
-/* ---- QUIZ: self-marking, must get every question right (retries allowed) ---- */
+/* ---- QUIZ: one question at a time, instant marking, retry on wrong ---- */
 function rQuiz(b){
-  const s = el("section","station");
-  if (b.title) s.appendChild(el("h2","step-title", b.title));
-  if (b.note) s.appendChild(el("p","lead", b.note));
-  const chosen = new Array(b.questions.length).fill(null);
-  const groups = [];
+  const s = el("section");
+  const head = el("p","qhead");
+  const qtext = el("p","qtext");
+  const opts = el("div","opts");
+  const fb = el("div","feedback"); fb.hidden = true;
+  const row = el("div","row no-print"); row.style.marginTop = "18px";
+  const btn = el("button","btn-primary","Check answer");
+  row.appendChild(btn);
+  s.appendChild(head); s.appendChild(qtext); s.appendChild(opts); s.appendChild(fb); s.appendChild(row);
 
-  b.questions.forEach((q, i) => {
-    const wrap = el("div","quizq");
-    wrap.appendChild(el("div","quizq-text", "<b>Question " + (i+1) + "</b><br>" + q.q));
-    const opts = el("div","opts");
-    q.options.forEach((opt, j) => {
+  const n = b.questions.length;
+  const chosen = new Array(n).fill(null);
+  const solved = new Array(n).fill(false);
+  let qi = 0;
+
+  function draw(){
+    const q = b.questions[qi];
+    head.textContent = "Question " + (qi+1) + " of " + n;
+    qtext.innerHTML = q.q;
+    opts.innerHTML = "";
+    q.options.forEach((text, j) => {
       const lab = el("label","opt");
-      const radio = el("input"); radio.type = "radio"; radio.name = b.id + "-" + i;
-      radio.addEventListener("change", () => { chosen[i] = j; markDirty(); });
-      lab.appendChild(radio); lab.appendChild(el("span","", opt));
+      const radio = el("input"); radio.type = "radio"; radio.name = b.id + "-q" + qi;
+      radio.checked = chosen[qi] === j;
+      if (chosen[qi] === j) lab.classList.add("chosen");
+      radio.addEventListener("change", () => {
+        chosen[qi] = j;
+        Array.from(opts.children).forEach((c, k) => c.classList.toggle("chosen", k === j));
+        fb.hidden = true;
+        markDirty();
+      });
+      lab.appendChild(radio); lab.appendChild(el("span","", text));
       opts.appendChild(lab);
     });
-    wrap.appendChild(opts);
-    const fb = el("div","feedback"); fb.hidden = true;
-    wrap.appendChild(fb);
-    groups.push({ wrap, fb, opts });
-    s.appendChild(wrap);
+    fb.hidden = true;
+    btn.textContent = "Check answer";
+    if (solved[qi]) reveal(true, false);
+  }
+  function reveal(ok, animate){
+    const q = b.questions[qi];
+    Array.from(opts.children).forEach((c, k) => {
+      c.classList.toggle("right", ok && k === chosen[qi]);
+      c.classList.toggle("wrong", !ok && k === chosen[qi]);
+    });
+    fb.hidden = false;
+    fb.dataset.verdict = ok ? "correct" : "incorrect";
+    fb.innerHTML = "<b></b><span></span>";
+    fb.querySelector("b").textContent = ok ? "Correct" : "Not quite — try another answer";
+    fb.querySelector("span").textContent = ok ? (q.why || "") : (q.hint || "Read the question again and pick a different answer.");
+    if (ok && qi < n - 1) btn.textContent = "Next question →";
+    else if (ok) btn.textContent = "All done ✓";
+  }
+  btn.addEventListener("click", () => {
+    if (solved[qi] && qi < n - 1){ qi++; draw(); return; }
+    if (solved[qi]) return;
+    if (chosen[qi] === null){ fb.hidden = false; fb.dataset.verdict = "incorrect"; fb.innerHTML = "<b>Choose an answer</b><span>Pick one of the options above, then check it.</span>"; return; }
+    const ok = chosen[qi] === b.questions[qi].answer;
+    solved[qi] = solved[qi] || ok;
+    reveal(ok, true);
+    markDirty();
   });
 
-  const row = el("div","row no-print");
-  const btn = el("button","btn-primary","Check my answers");
-  const score = el("span","chip");
-  row.appendChild(btn); row.appendChild(score);
-  s.appendChild(row);
-
-  let checked = false;
-  function allRight(){ return chosen.every((c, i) => c === b.questions[i].answer); }
-  function mark(){
-    checked = true;
-    let right = 0;
-    b.questions.forEach((q, i) => {
-      const g = groups[i];
-      if (chosen[i] === null){ g.fb.hidden = true; return; }
-      const ok = chosen[i] === q.answer;
-      if (ok) right++;
-      g.fb.hidden = false;
-      g.fb.dataset.verdict = ok ? "correct" : "incorrect";
-      g.fb.innerHTML = "<b></b><span></span>";
-      g.fb.querySelector("b").textContent = ok ? "Correct" : "Not quite — try again";
-      g.fb.querySelector("span").textContent = ok ? (q.why || "") : (q.hint || "Read the question once more and pick another answer.");
-    });
-    const answered = chosen.filter(c => c !== null).length;
-    score.dataset.state = allRight() ? "saved" : "";
-    score.textContent = "Score: " + right + " / " + b.questions.length + (answered < b.questions.length ? " (some unanswered)" : "");
-    markDirty();
-  }
-  btn.addEventListener("click", mark);
-
   fields[b.id] = {
-    get: () => ({ chosen, score: chosen.reduce((n, c, i) => n + (c === b.questions[i].answer ? 1 : 0), 0), outOf: b.questions.length }),
+    get: () => ({ chosen, solved, score: solved.filter(Boolean).length, outOf: n }),
     set: (v) => {
       if (!v || !Array.isArray(v.chosen)) return;
-      v.chosen.forEach((c, i) => {
-        if (c === null || c === undefined) return;
-        chosen[i] = c;
-        const r = groups[i].opts.querySelectorAll("input")[c];
-        if (r) r.checked = true;
-      });
-      mark();
+      v.chosen.forEach((c, i) => { if (c !== null && c !== undefined) chosen[i] = c; });
+      if (Array.isArray(v.solved)) v.solved.forEach((x, i) => { solved[i] = !!x; });
+      qi = solved.findIndex(x => !x); if (qi === -1) qi = n - 1;
+      draw();
     }
   };
-  return { section: s, check: () => allRight()
-    ? { ok: true }
-    : { ok: false, message: checked ? "Fix the answers marked in red, then check again." : "Answer every question and press Check my answers." } };
+  draw();
+  return { section:s,
+           check:() => solved.every(Boolean) ? { ok:true } : { ok:false, message:"Answer all " + n + " questions correctly (" + solved.filter(Boolean).length + "/" + n + ")" },
+           brief:{ eyebrow:"Quiz", title:stripTags(b.title) || "Quiz", text:b.note || "Choose an answer, then press Check answer. If it's wrong you can try again." } };
 }
 
-/* ---- PASSWORD: nothing typed here is ever saved or sent ---- */
+/* ---- PASSWORD: nothing typed here is saved or sent ---- */
 const COMMON_PW = ["password","123456","12345678","qwerty","abc123","letmein","monkey","football","iloveyou","admin","welcome","dragon","sunshine","princess","password1","liverpool","arsenal","chelsea","minecraft","fortnite"];
 function rPassword(b){
-  const s = el("section","station");
-  if (b.title) s.appendChild(el("h2","step-title", b.title));
-  if (b.task) s.appendChild(el("p","lead", b.task));
+  const s = el("section");
   s.appendChild(el("p","warnline","🔒 Test made-up passwords only — never a real one. Nothing you type here is sent anywhere or saved."));
-
   const inp = el("input"); inp.type = "text"; inp.autocomplete = "off"; inp.placeholder = "Try a password…";
   s.appendChild(inp);
   const meter = el("div","meter"); const bar = el("div","meter-bar"); meter.appendChild(bar); s.appendChild(meter);
@@ -367,46 +388,45 @@ function rPassword(b){
 
   let best = 0;
   const rules = [
-    { label: "At least 12 characters long", test: (p) => p.length >= 12 },
-    { label: "Has capital letters and small letters", test: (p) => /[a-z]/.test(p) && /[A-Z]/.test(p) },
-    { label: "Has at least one number", test: (p) => /[0-9]/.test(p) },
-    { label: "Has a symbol, like ! ? # or £", test: (p) => /[^A-Za-z0-9]/.test(p) },
-    { label: "Is not a common or guessable password", test: (p) => p.length > 0 && !COMMON_PW.some(c => p.toLowerCase().includes(c)) },
+    { label:"At least 12 characters long", test:(p) => p.length >= 12 },
+    { label:"Has capital letters and small letters", test:(p) => /[a-z]/.test(p) && /[A-Z]/.test(p) },
+    { label:"Has at least one number", test:(p) => /[0-9]/.test(p) },
+    { label:"Has a symbol, like ! ? # or £", test:(p) => /[^A-Za-z0-9]/.test(p) },
+    { label:"Is not a common or guessable password", test:(p) => p.length > 0 && !COMMON_PW.some(c => p.toLowerCase().includes(c)) },
   ];
   function update(){
     const p = inp.value;
     const passed = rules.map(r => r.test(p));
-    const n = passed.filter(Boolean).length;
+    const k = passed.filter(Boolean).length;
     checks.innerHTML = "";
     rules.forEach((r, i) => {
       const li = el("li", passed[i] ? "pass" : "fail");
       li.textContent = (passed[i] ? "✓ " : "✗ ") + r.label;
       checks.appendChild(li);
     });
-    bar.style.width = (p ? (n / rules.length) * 100 : 0) + "%";
-    bar.dataset.level = n <= 2 ? "weak" : n <= 4 ? "ok" : "strong";
-    verdict.textContent = !p ? "" : n <= 2 ? "Weak — a hacker's computer could guess this very quickly." :
-                          n <= 4 ? "Getting better — keep going." : "Strong — well done!";
-    if (n > best){ best = n; }
+    bar.style.width = (p ? (k / rules.length) * 100 : 0) + "%";
+    bar.dataset.level = k <= 2 ? "weak" : k <= 4 ? "ok" : "strong";
+    verdict.textContent = !p ? "" : k <= 2 ? "Weak — a hacker's computer could guess this very quickly."
+                        : k <= 4 ? "Getting better — keep going." : "Strong — well done!";
+    if (k > best) best = k;
     markDirty();
   }
   inp.addEventListener("input", update);
-  fields[b.id] = { get: () => ({ bestScore: best, outOf: rules.length }), set: (v) => { if (v && v.bestScore) best = v.bestScore; } };
-  return { section: s, check: () => best >= rules.length
-    ? { ok: true } : { ok: false, message: "Make a password that ticks all five boxes to continue." } };
+  fields[b.id] = { get:() => ({ bestScore:best, outOf:rules.length }), set:(v) => { if (v && v.bestScore) best = v.bestScore; } };
+  return { section:s,
+           check:() => best >= rules.length ? { ok:true } : { ok:false, message:"Tick all five boxes (" + best + "/5)" },
+           brief:{ eyebrow:"Challenge", title:stripTags(b.title) || "Password strength", text:b.task || "Invent a password that ticks all five boxes." } };
 }
 
-/* ---- CAESAR: plaintext stored only as a hash ---- */
+/* ---- CAESAR ---- */
 function rCaesar(b){
-  const s = el("section","station");
-  if (b.title) s.appendChild(el("h2","step-title", b.title));
-  if (b.task) s.appendChild(el("p","lead", b.task));
+  const s = el("section");
   s.appendChild(el("div","cipher-text", b.ciphertext));
 
-  const row = el("div","row no-print");
-  const lbl = el("label","","Shift: ");
+  const row = el("div","shiftrow");
+  const lbl = el("label","","Shift ");
   const shiftVal = el("b","","0");
-  lbl.appendChild(shiftVal); lbl.style.margin = "0";
+  lbl.appendChild(shiftVal);
   const slider = el("input"); slider.type = "range"; slider.min = "0"; slider.max = "25"; slider.value = "0";
   row.appendChild(lbl); row.appendChild(slider);
   s.appendChild(row);
@@ -420,19 +440,14 @@ function rCaesar(b){
       return String.fromCharCode(((c.charCodeAt(0) - base - k + 26) % 26) + base);
     });
   }
-  function redraw(){
-    const k = parseInt(slider.value, 10);
-    shiftVal.textContent = k;
-    out.textContent = shiftBy(b.ciphertext, k);
-  }
+  function redraw(){ shiftVal.textContent = slider.value; out.textContent = shiftBy(b.ciphertext, parseInt(slider.value,10)); }
   slider.addEventListener("input", () => { redraw(); markDirty(); });
   redraw();
 
-  s.appendChild(el("label","big-label", b.prompt || "Type the secret message here:"));
   const ans = el("input"); ans.type = "text"; ans.placeholder = "The message says…";
+  ans.style.marginTop = "16px";
   s.appendChild(ans);
-
-  const row2 = el("div","row no-print");
+  const row2 = el("div","row no-print"); row2.style.marginTop = "14px";
   const btn = el("button","btn-primary","Check the message");
   const fb = el("div","feedback"); fb.hidden = true;
   row2.appendChild(btn);
@@ -445,25 +460,21 @@ function rCaesar(b){
     fb.hidden = false;
     fb.dataset.verdict = ok ? "correct" : "incorrect";
     fb.innerHTML = "<b></b><span></span>";
-    fb.querySelector("b").textContent = ok ? "Code cracked!" : "Not yet";
+    fb.querySelector("b").textContent = ok ? "Code cracked" : "Not yet";
     fb.querySelector("span").textContent = ok
-      ? "Brilliant — you found the shift and read the hidden message."
-      : "Move the shift slider one step at a time and read the green text underneath. When it turns into real English words, copy it into the box.";
+      ? "You found the shift and read the hidden message."
+      : "Move the shift slider one step at a time. When the green text turns into real English words, copy it into the box.";
     markDirty();
   });
   ans.addEventListener("input", markDirty);
 
   fields[b.id] = {
-    get: () => ({ shift: parseInt(slider.value, 10), answer: ans.value, solved }),
-    set: (v) => {
-      if (!v) return;
-      if (typeof v.shift === "number"){ slider.value = v.shift; redraw(); }
-      if (v.answer) ans.value = v.answer;
-      solved = !!v.solved;
-    }
+    get:() => ({ shift:parseInt(slider.value,10), answer:ans.value, solved }),
+    set:(v) => { if (!v) return; if (typeof v.shift === "number"){ slider.value = v.shift; redraw(); } if (v.answer) ans.value = v.answer; solved = !!v.solved; }
   };
-  return { section: s, check: () => solved
-    ? { ok: true } : { ok: false, message: "Crack the code and check the message to continue." } };
+  return { section:s,
+           check:() => solved ? { ok:true } : { ok:false, message:"Crack the code and check the message" },
+           brief:{ eyebrow:"Puzzle", title:stripTags(b.title) || "Caesar cipher", text:b.task || "Move the slider until the message makes sense." } };
 }
 
 /* ---------- Python via Pyodide ---------- */
@@ -477,7 +488,7 @@ async function ensurePyodide(out){
       sc.src = "https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js";
       sc.onload = res; sc.onerror = () => rej(new Error("Could not load Python."));
       document.head.appendChild(sc);
-    }).then(() => loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.2/full/" }))
+    }).then(() => loadPyodide({ indexURL:"https://cdn.jsdelivr.net/pyodide/v0.26.2/full/" }))
       .then((p) => { pyodide = p; return p; });
   }
   return pyLoading;
@@ -493,13 +504,10 @@ async function runPython(code, out, err){
       "except Exception:\n    import traceback; traceback.print_exc()\n" +
       "finally:\n    sys.stdout, sys.stderr = _so, _se\n_buf.getvalue()\n"
     ) || "(no output)";
-  }catch(e){
-    out.textContent = "";
-    err.textContent = e.message || "Something went wrong running your code.";
-  }
+  }catch(e){ out.textContent = ""; err.textContent = e.message || "Something went wrong running your code."; }
 }
 
-$("pdfBtn").addEventListener("click", () => { save(); document.body.classList.add("printing"); window.print(); setTimeout(() => document.body.classList.remove("printing"), 500); });
+$("pdfBtn").addEventListener("click", () => { save(); window.print(); });
 </script>
 </body>
 </html>
