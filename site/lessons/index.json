@@ -1,12 +1,17 @@
 [
   {
-    "id": "demo",
-    "title": "Variables and loops (demo lesson)",
-    "description": "Warm-up questions with AI checking, a Python task, and a Scratch activity."
+    "id": "cyber-escape",
+    "title": "Escape the Hacker",
+    "description": "Five cybersecurity missions: phishing, passwords, ciphers and a quiz, then design a poster."
   },
   {
     "id": "app-design",
-    "title": "App Design One-Off",
-    "description": "One off focussing on App Design"
+    "title": "Become an App Designer",
+    "description": "Design your own app: name, logo, screens, features and target audience."
+  },
+  {
+    "id": "demo",
+    "title": "Variables and loops (demo lesson)",
+    "description": "Warm-up questions, a Python task, and a Scratch activity."
   }
 ]
