@@ -7,15 +7,20 @@
 <link rel="stylesheet" href="style.css">
 <script src="config.js"></script>
 </head>
-<body>
+<body class="lesson-page">
 <header>
   <div class="bar">
-    <div class="brand"><b id="lessonTitle">Lesson</b><span><a href="index.html">&larr; All lessons</a></span></div>
+    <div class="brand">
+      <b id="lessonTitle">Lesson</b>
+      <span><a href="index.html">&larr; All lessons</a></span>
+    </div>
     <div class="auth">
+      <span class="stepcount" id="stepCount"></span>
       <span class="chip" id="saveChip">Not saved yet</span>
       <button class="btn-ghost no-print" id="pdfBtn">Download as PDF</button>
     </div>
   </div>
+  <div class="progress no-print"><div class="progress-bar" id="progressBar"></div></div>
 </header>
 
 <main>
@@ -23,8 +28,21 @@
     You're not signed in, so your work <b>will not save</b>.
     <a href="index.html">Sign in on the home page</a> first, then come back.
   </div>
-  <p class="hint" id="intro"></p>
+
   <div id="blocks"></div>
+
+  <nav class="stepnav no-print" id="stepNav">
+    <button class="btn-ghost" id="backBtn">&larr; Back</button>
+    <div class="navmid">
+      <p class="lockmsg" id="lockMsg" aria-live="polite"></p>
+    </div>
+    <button class="btn-primary btn-big" id="nextBtn">Continue &rarr;</button>
+  </nav>
+
+  <div class="footnote no-print">
+    <span id="bypassDot" role="button" tabindex="0" aria-label="Teacher options" title=" ">&#183;</span>
+  </div>
+
   <p class="print-note">Printed from the Computing lesson hub — interactive activities are not shown on paper.</p>
 </main>
 
@@ -33,41 +51,43 @@ const API = (window.HUB && window.HUB.WORKER_URL) || "";
 const token = localStorage.getItem("hub_token") || "";
 const $ = (id) => document.getElementById(id);
 const lessonId = new URLSearchParams(location.search).get("id") || "demo";
-const fields = {};   // id -> { get(), set(v) }
+
+const fields = {};        // id -> { get, set }
+const steps  = [];        // { section, check() }
+let step = 0;
+let bypassed = false;
 let lesson = null;
 
 if (!token) $("signinBanner").hidden = false;
 
+function el(tag, cls, html){ const e=document.createElement(tag); if(cls)e.className=cls; if(html!==undefined)e.innerHTML=html; return e; }
 function setChip(state){
   const c = $("saveChip");
   c.dataset.state = state;
   c.textContent = state==="saved" ? "Saved" : state==="saving" ? "Saving…" : state==="error" ? "Not saved" : "Not saved yet";
 }
-function el(tag, cls, html){ const e=document.createElement(tag); if(cls)e.className=cls; if(html!==undefined)e.innerHTML=html; return e; }
+function strHash(s){ let x = 5381; for (const c of s) x = ((x << 5) + x + c.charCodeAt(0)) >>> 0; return x; }
+function normLetters(s){ return (s || "").toUpperCase().replace(/[^A-Z]/g, ""); }
+function wordCount(s){ return (s || "").trim().split(/\s+/).filter(Boolean).length; }
 
-/* ---------- autosave -------------------------------------------------
-   Saves 2.5s after the student stops changing anything, never more often
-   than once every 6s, and never when nothing has actually changed. A full
-   lesson therefore costs a handful of database writes, not hundreds.
-   -------------------------------------------------------------------- */
+/* ---------- autosave: debounced, deduplicated, rate-limit friendly ---------- */
 const AUTOSAVE_DELAY = 2500, MIN_GAP = 6000;
 let saveTimer = null, lastSent = "", lastSaveAt = 0, saving = false;
 
 function snapshot(){
-  const data = {};
+  const data = { __step: step };
   Object.entries(fields).forEach(([id, f]) => { data[id] = f.get(); });
   return data;
 }
 function markDirty(){
-  if (JSON.stringify(snapshot()) === lastSent) return; // nothing really changed
+  refreshGate();
+  if (JSON.stringify(snapshot()) === lastSent) return;
   setChip("");
   clearTimeout(saveTimer);
-  const wait = Math.max(AUTOSAVE_DELAY, MIN_GAP - (Date.now() - lastSaveAt));
-  saveTimer = setTimeout(save, wait);
+  saveTimer = setTimeout(save, Math.max(AUTOSAVE_DELAY, MIN_GAP - (Date.now() - lastSaveAt)));
 }
 async function save(){
-  if (saving) return;
-  if (!token || !API || API.indexOf("PASTE_") === 0) return;
+  if (saving || !token || !API || API.indexOf("PASTE_") === 0) return;
   const payload = JSON.stringify(snapshot());
   if (payload === lastSent) return;
   saving = true; setChip("saving");
@@ -77,30 +97,32 @@ async function save(){
       headers:{ "Content-Type":"application/json", Authorization:"Bearer " + token },
       body: JSON.stringify({ lesson: lessonId, data: JSON.parse(payload) })
     });
-    if (!r.ok) throw new Error((await r.json().catch(()=>({}))).error || "Could not save.");
+    if (!r.ok) throw new Error("save failed");
     lastSent = payload; lastSaveAt = Date.now(); setChip("saved");
   }catch(e){ setChip("error"); }
   saving = false;
 }
-// flush on leaving the page so nothing is lost
 window.addEventListener("pagehide", () => { clearTimeout(saveTimer); save(); });
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") save(); });
 
-/* ---------- load lesson ---------- */
+/* ---------- load ---------- */
 fetch("lessons/" + encodeURIComponent(lessonId) + ".json")
-  .then(r => {
-    if (!r.ok) throw new Error("missing");
-    return r.json().catch(() => { throw new Error("badjson"); });
-  })
+  .then(r => { if (!r.ok) throw new Error("missing"); return r.json().catch(() => { throw new Error("badjson"); }); })
   .then(async (l) => {
     lesson = l;
     document.title = l.title;
     $("lessonTitle").textContent = l.title;
-    $("intro").textContent = l.intro || "";
-    l.blocks.forEach(renderBlock);   // each block is isolated, see renderBlock
+    if (l.intro){
+      const s = el("section","station intro-station");
+      s.appendChild(el("p","lead", l.intro));
+      $("blocks").appendChild(s);
+    }
+    l.blocks.forEach(renderBlock);
     if (token && API && API.indexOf("PASTE_")!==0) await loadSaved();
+    showStep(step, true);
   })
   .catch((e) => {
+    $("stepNav").hidden = true;
     $("blocks").innerHTML = e.message === "missing"
       ? '<p class="err">Could not find this lesson. Check the lesson id in the address bar.</p>'
       : e.message === "badjson"
@@ -114,49 +136,134 @@ async function loadSaved(){
     const d = await r.json();
     if (r.ok && d.data){
       Object.entries(d.data).forEach(([id, val]) => { if (fields[id]) fields[id].set(val); });
+      if (typeof d.data.__step === "number") step = Math.min(Math.max(d.data.__step, 0), steps.length - 1);
       lastSent = JSON.stringify(snapshot());
       setChip("saved");
     }
   }catch(e){ /* offline — student can still work */ }
 }
-$("pdfBtn").addEventListener("click", () => { save(); window.print(); });
 
-/* ---------- helpers used by interactive blocks ---------- */
-function strHash(s){ let x = 5381; for (const c of s) x = ((x << 5) + x + c.charCodeAt(0)) >>> 0; return x; }
-function normLetters(s){ return (s || "").toUpperCase().replace(/[^A-Z]/g, ""); }
+/* ---------- one activity per page ---------- */
+function showStep(i, jump){
+  step = Math.min(Math.max(i, 0), steps.length - 1);
+  steps.forEach((s, n) => { s.section.hidden = (n !== step); });
+  $("stepCount").textContent = "Step " + (step + 1) + " of " + steps.length;
+  $("progressBar").style.width = (((step) / (steps.length - 1)) * 100) + "%";
+  $("backBtn").disabled = step === 0;
+  const last = step === steps.length - 1;
+  $("nextBtn").textContent = last ? "Finish 🏁" : "Continue →";
+  refreshGate();
+  if (!jump) window.scrollTo({ top: 0, behavior: "smooth" });
+}
+function refreshGate(){
+  const s = steps[step];
+  if (!s) return;
+  const res = bypassed ? { ok: true } : s.check();
+  $("nextBtn").disabled = !res.ok;
+  $("lockMsg").textContent = res.ok ? "" : (res.message || "Finish this activity to continue.");
+  $("lockMsg").hidden = res.ok;
+}
+$("backBtn").addEventListener("click", () => showStep(step - 1));
+$("nextBtn").addEventListener("click", () => {
+  if (step === steps.length - 1){ save(); alert("Well done — you have finished the lesson. Your work is saved."); return; }
+  showStep(step + 1);
+});
 
-/* ---------- block renderers ---------- */
-function renderBlock(b, i){
-  const box = $("blocks");
-  const R = { text:rText, question:rQuestion, python:rPython, embed:rEmbed, link:rLink,
-              quiz:rQuiz, password:rPassword, caesar:rCaesar }[b.type];
-  if (!R){ console.warn("Unknown block type:", b.type); return; }
-  try {
-    box.appendChild(R(b));
-  } catch (err) {
-    // One faulty block must never take the whole lesson down with it.
-    console.error("Block " + (i+1) + " (" + b.type + ") failed:", err);
-    const s = el("section","station");
-    s.appendChild(el("p","err", "This activity could not be displayed. Carry on with the rest of the lesson and tell your teacher."));
-    box.appendChild(s);
+/* ---------- bypass: a deliberately dull dot in the corner ---------- */
+$("bypassDot").addEventListener("click", askBypass);
+$("bypassDot").addEventListener("keydown", (e) => { if (e.key === "Enter") askBypass(); });
+function askBypass(){
+  const code = prompt("Enter code:");
+  if (code === null) return;
+  const wanted = (lesson && lesson.bypassHash) || 2667650483; // default code: SKIP-2026
+  if (strHash(code.trim()) === wanted){
+    bypassed = true;
+    document.body.classList.add("bypassed");
+    refreshGate();
+    alert("Skipping unlocked for this lesson. You can now move between all activities freely.");
+  } else {
+    alert("That code is not right.");
   }
 }
 
-function rText(b){ const s = el("section","station"); s.appendChild(el("div","", b.html)); return s; }
+/* ---------- renderers: each returns { section, check } ---------- */
+function renderBlock(b, i){
+  const R = { text:rText, question:rQuestion, python:rPython, embed:rEmbed, link:rLink,
+              quiz:rQuiz, password:rPassword, caesar:rCaesar }[b.type];
+  if (!R){ console.warn("Unknown block type:", b.type); return; }
+  let built;
+  try { built = R(b); }
+  catch (err){
+    console.error("Block " + (i+1) + " (" + b.type + ") failed:", err);
+    const s = el("section","station");
+    s.appendChild(el("p","err","This activity could not be displayed. Continue and tell your teacher."));
+    built = { section: s, check: () => ({ ok: true }) };
+  }
+  built.section.hidden = true;
+  $("blocks").appendChild(built.section);
+  steps.push(built);
+}
+
+function rText(b){
+  const s = el("section","station");
+  s.appendChild(el("div","prose", b.html));
+  return { section: s, check: () => ({ ok: true }) };
+}
+
+function rEmbed(b){
+  const s = el("section","station");
+  if (b.title) s.appendChild(el("h2","step-title", b.title));
+  if (b.note) s.appendChild(el("p","lead", b.note));
+  const f = el("iframe","embed"); f.src = b.url; f.height = b.height || 460;
+  f.setAttribute("allowfullscreen",""); f.title = b.title || "Embedded activity";
+  s.appendChild(f);
+
+  const done = el("label","confirm");
+  const cb = el("input"); cb.type = "checkbox";
+  cb.addEventListener("change", markDirty);
+  done.appendChild(cb);
+  done.appendChild(el("span","","I have watched the whole video"));
+  s.appendChild(done);
+
+  if (b.id) fields[b.id] = { get: () => cb.checked, set: (v) => { cb.checked = !!v; } };
+  return { section: s, check: () => cb.checked ? { ok: true } : { ok: false, message: "Watch the video, then tick the box to continue." } };
+}
 
 function rQuestion(b){
   const s = el("section","station");
-  s.appendChild(el("label","", b.prompt));
-  const ta = el("textarea"); ta.rows = 3; ta.placeholder = "Type your answer…";
-  ta.addEventListener("input", markDirty);
-  fields[b.id] = { get: () => ta.value, set: (v) => { ta.value = v || ""; } };
-  s.appendChild(ta);
-  return s;
+  s.appendChild(el("h2","step-title","Your answer"));
+  s.appendChild(el("p","lead", b.prompt));
+  const min = b.minWords || 8;
+  const ta = el("textarea"); ta.rows = 5; ta.placeholder = "Type your answer here…";
+  const counter = el("p","counter");
+  function tick(){
+    const n = wordCount(ta.value);
+    counter.textContent = n + " word" + (n===1?"":"s") + (n < min ? " — write at least " + min : " ✓");
+    counter.dataset.ok = n >= min;
+  }
+  ta.addEventListener("input", () => { tick(); markDirty(); });
+  fields[b.id] = { get: () => ta.value, set: (v) => { ta.value = v || ""; tick(); } };
+  s.appendChild(ta); s.appendChild(counter); tick();
+  return { section: s, check: () => wordCount(ta.value) >= min
+    ? { ok: true } : { ok: false, message: "Write at least " + min + " words to continue." } };
+}
+
+function rLink(b){
+  const s = el("section","station");
+  s.appendChild(el("h2","step-title", b.prompt || "Paste your link"));
+  if (b.note) s.appendChild(el("p","lead", b.note));
+  const inp = el("input"); inp.type = "text"; inp.placeholder = "https://…";
+  inp.addEventListener("input", markDirty);
+  fields[b.id] = { get: () => inp.value, set: (v) => { inp.value = v || ""; } };
+  s.appendChild(inp);
+  return { section: s, check: () => /^https?:\/\/\S+\.\S+/.test(inp.value.trim())
+    ? { ok: true } : { ok: false, message: "Paste a link starting with https:// to continue." } };
 }
 
 function rPython(b){
   const s = el("section","station");
-  if (b.task) s.appendChild(el("p","hint", b.task));
+  s.appendChild(el("h2","step-title","Python"));
+  if (b.task) s.appendChild(el("p","lead", b.task));
   const ta = el("textarea","code"); ta.spellcheck = false; ta.value = b.starter || "";
   ta.addEventListener("input", markDirty);
   fields[b.id] = { get: () => ta.value, set: (v) => { if (v) ta.value = v; } };
@@ -164,52 +271,30 @@ function rPython(b){
   const row = el("div","row no-print");
   const run = el("button","btn-primary","Run"); const err = el("span","err");
   const out = el("div","output"); out.setAttribute("aria-live","polite");
-  run.addEventListener("click", () => runPython(ta.value, out, err));
+  let ran = false;
+  run.addEventListener("click", async () => { await runPython(ta.value, out, err); ran = true; markDirty(); });
   row.appendChild(run); row.appendChild(err);
   s.appendChild(row); s.appendChild(out);
-  return s;
+  return { section: s, check: () => ran ? { ok: true } : { ok: false, message: "Press Run at least once to continue." } };
 }
 
-function rEmbed(b){
-  const s = el("section","station");
-  if (b.title) s.appendChild(el("label","", b.title));
-  if (b.note) s.appendChild(el("p","hint", b.note));
-  const f = el("iframe","embed"); f.src = b.url; f.height = b.height || 420;
-  f.setAttribute("allowfullscreen",""); f.title = b.title || "Embedded activity";
-  s.appendChild(f);
-  return s;
-}
-
-function rLink(b){
-  const s = el("section","station");
-  s.appendChild(el("label","", b.prompt || "Paste your link"));
-  if (b.note) s.appendChild(el("p","hint", b.note));
-  const inp = el("input"); inp.type = "text"; inp.placeholder = "https://…";
-  inp.addEventListener("input", markDirty);
-  fields[b.id] = { get: () => inp.value, set: (v) => { inp.value = v || ""; } };
-  s.appendChild(inp);
-  return s;
-}
-
-/* ---- QUIZ: multiple choice, marks itself, explains each answer ---- */
+/* ---- QUIZ: self-marking, must get every question right (retries allowed) ---- */
 function rQuiz(b){
   const s = el("section","station");
-  if (b.title) s.appendChild(el("h2","", b.title));
-  if (b.note) s.appendChild(el("p","hint", b.note));
+  if (b.title) s.appendChild(el("h2","step-title", b.title));
+  if (b.note) s.appendChild(el("p","lead", b.note));
   const chosen = new Array(b.questions.length).fill(null);
   const groups = [];
 
   b.questions.forEach((q, i) => {
     const wrap = el("div","quizq");
-    wrap.appendChild(el("div","quizq-text", "<b>" + (i+1) + ".</b> " + q.q));
+    wrap.appendChild(el("div","quizq-text", "<b>Question " + (i+1) + "</b><br>" + q.q));
     const opts = el("div","opts");
     q.options.forEach((opt, j) => {
-      const id = b.id + "-" + i + "-" + j;
       const lab = el("label","opt");
-      const radio = el("input"); radio.type = "radio"; radio.name = b.id + "-" + i; radio.id = id;
+      const radio = el("input"); radio.type = "radio"; radio.name = b.id + "-" + i;
       radio.addEventListener("change", () => { chosen[i] = j; markDirty(); });
-      lab.appendChild(radio);
-      lab.appendChild(el("span","", opt));
+      lab.appendChild(radio); lab.appendChild(el("span","", opt));
       opts.appendChild(lab);
     });
     wrap.appendChild(opts);
@@ -225,7 +310,10 @@ function rQuiz(b){
   row.appendChild(btn); row.appendChild(score);
   s.appendChild(row);
 
+  let checked = false;
+  function allRight(){ return chosen.every((c, i) => c === b.questions[i].answer); }
   function mark(){
+    checked = true;
     let right = 0;
     b.questions.forEach((q, i) => {
       const g = groups[i];
@@ -239,7 +327,7 @@ function rQuiz(b){
       g.fb.querySelector("span").textContent = ok ? (q.why || "") : (q.hint || "Read the question once more and pick another answer.");
     });
     const answered = chosen.filter(c => c !== null).length;
-    score.dataset.state = right === b.questions.length ? "saved" : "";
+    score.dataset.state = allRight() ? "saved" : "";
     score.textContent = "Score: " + right + " / " + b.questions.length + (answered < b.questions.length ? " (some unanswered)" : "");
     markDirty();
   }
@@ -258,16 +346,18 @@ function rQuiz(b){
       mark();
     }
   };
-  return s;
+  return { section: s, check: () => allRight()
+    ? { ok: true }
+    : { ok: false, message: checked ? "Fix the answers marked in red, then check again." : "Answer every question and press Check my answers." } };
 }
 
-/* ---- PASSWORD: live strength meter. Nothing typed here is ever saved. ---- */
+/* ---- PASSWORD: nothing typed here is ever saved or sent ---- */
 const COMMON_PW = ["password","123456","12345678","qwerty","abc123","letmein","monkey","football","iloveyou","admin","welcome","dragon","sunshine","princess","password1","liverpool","arsenal","chelsea","minecraft","fortnite"];
 function rPassword(b){
   const s = el("section","station");
-  if (b.title) s.appendChild(el("h2","", b.title));
-  if (b.task) s.appendChild(el("p","hint", b.task));
-  s.appendChild(el("p","warnline","🔒 Test made-up passwords only — never a real one. Nothing you type in this box is sent anywhere or saved."));
+  if (b.title) s.appendChild(el("h2","step-title", b.title));
+  if (b.task) s.appendChild(el("p","lead", b.task));
+  s.appendChild(el("p","warnline","🔒 Test made-up passwords only — never a real one. Nothing you type here is sent anywhere or saved."));
 
   const inp = el("input"); inp.type = "text"; inp.autocomplete = "off"; inp.placeholder = "Try a password…";
   s.appendChild(inp);
@@ -283,7 +373,6 @@ function rPassword(b){
     { label: "Has a symbol, like ! ? # or £", test: (p) => /[^A-Za-z0-9]/.test(p) },
     { label: "Is not a common or guessable password", test: (p) => p.length > 0 && !COMMON_PW.some(c => p.toLowerCase().includes(c)) },
   ];
-
   function update(){
     const p = inp.value;
     const passed = rules.map(r => r.test(p));
@@ -294,35 +383,31 @@ function rPassword(b){
       li.textContent = (passed[i] ? "✓ " : "✗ ") + r.label;
       checks.appendChild(li);
     });
-    const pct = p ? (n / rules.length) * 100 : 0;
-    bar.style.width = pct + "%";
+    bar.style.width = (p ? (n / rules.length) * 100 : 0) + "%";
     bar.dataset.level = n <= 2 ? "weak" : n <= 4 ? "ok" : "strong";
     verdict.textContent = !p ? "" : n <= 2 ? "Weak — a hacker's computer could guess this very quickly." :
                           n <= 4 ? "Getting better — keep going." : "Strong — well done!";
-    if (n > best){ best = n; markDirty(); }
+    if (n > best){ best = n; }
+    markDirty();
   }
   inp.addEventListener("input", update);
-
-  // Only the best score is saved — never the password itself.
   fields[b.id] = { get: () => ({ bestScore: best, outOf: rules.length }), set: (v) => { if (v && v.bestScore) best = v.bestScore; } };
-  return s;
+  return { section: s, check: () => best >= rules.length
+    ? { ok: true } : { ok: false, message: "Make a password that ticks all five boxes to continue." } };
 }
 
-/* ---- CAESAR: shift wheel + checked answer (plaintext stored as a hash) ---- */
+/* ---- CAESAR: plaintext stored only as a hash ---- */
 function rCaesar(b){
   const s = el("section","station");
-  if (b.title) s.appendChild(el("h2","", b.title));
-  if (b.task) s.appendChild(el("p","hint", b.task));
-
+  if (b.title) s.appendChild(el("h2","step-title", b.title));
+  if (b.task) s.appendChild(el("p","lead", b.task));
   s.appendChild(el("div","cipher-text", b.ciphertext));
 
   const row = el("div","row no-print");
-  const lbl = el("label","", "Shift: ");
-  const shiftVal = el("b","", "0");        // kept as a direct reference
-  lbl.appendChild(shiftVal);
-  lbl.style.margin = "0";
+  const lbl = el("label","","Shift: ");
+  const shiftVal = el("b","","0");
+  lbl.appendChild(shiftVal); lbl.style.margin = "0";
   const slider = el("input"); slider.type = "range"; slider.min = "0"; slider.max = "25"; slider.value = "0";
-  slider.style.maxWidth = "260px";
   row.appendChild(lbl); row.appendChild(slider);
   s.appendChild(row);
 
@@ -343,7 +428,7 @@ function rCaesar(b){
   slider.addEventListener("input", () => { redraw(); markDirty(); });
   redraw();
 
-  s.appendChild(el("label","", b.prompt || "Type the secret message here:"));
+  s.appendChild(el("label","big-label", b.prompt || "Type the secret message here:"));
   const ans = el("input"); ans.type = "text"; ans.placeholder = "The message says…";
   s.appendChild(ans);
 
@@ -363,7 +448,7 @@ function rCaesar(b){
     fb.querySelector("b").textContent = ok ? "Code cracked!" : "Not yet";
     fb.querySelector("span").textContent = ok
       ? "Brilliant — you found the shift and read the hidden message."
-      : "Move the shift slider one step at a time and read the text underneath. When it turns into real English words, copy it into the box.";
+      : "Move the shift slider one step at a time and read the green text underneath. When it turns into real English words, copy it into the box.";
     markDirty();
   });
   ans.addEventListener("input", markDirty);
@@ -373,24 +458,25 @@ function rCaesar(b){
     set: (v) => {
       if (!v) return;
       if (typeof v.shift === "number"){ slider.value = v.shift; redraw(); }
-      if (v.answer){ ans.value = v.answer; }
+      if (v.answer) ans.value = v.answer;
       solved = !!v.solved;
     }
   };
-  return s;
+  return { section: s, check: () => solved
+    ? { ok: true } : { ok: false, message: "Crack the code and check the message to continue." } };
 }
 
-/* ---------- Python (Pyodide, loaded on first Run) ---------- */
+/* ---------- Python via Pyodide ---------- */
 let pyodide = null, pyLoading = null;
 async function ensurePyodide(out){
   if (pyodide) return pyodide;
   if (!pyLoading){
     out.textContent = "Loading Python… (first run only)";
     pyLoading = new Promise((res, rej) => {
-      const s = document.createElement("script");
-      s.src = "https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js";
-      s.onload = res; s.onerror = () => rej(new Error("Could not load Python."));
-      document.head.appendChild(s);
+      const sc = document.createElement("script");
+      sc.src = "https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js";
+      sc.onload = res; sc.onerror = () => rej(new Error("Could not load Python."));
+      document.head.appendChild(sc);
     }).then(() => loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.2/full/" }))
       .then((p) => { pyodide = p; return p; });
   }
@@ -401,25 +487,19 @@ async function runPython(code, out, err){
   try{
     const py = await ensurePyodide(out);
     py.globals.set("_user_code", code);
-    const result = py.runPython(
-      "import sys, io\n" +
-      "_buf = io.StringIO()\n" +
-      "_so, _se = sys.stdout, sys.stderr\n" +
-      "sys.stdout = sys.stderr = _buf\n" +
-      "try:\n" +
-      "    exec(compile(_user_code, '<student>', 'exec'), {})\n" +
-      "except Exception:\n" +
-      "    import traceback; traceback.print_exc()\n" +
-      "finally:\n" +
-      "    sys.stdout, sys.stderr = _so, _se\n" +
-      "_buf.getvalue()\n"
-    );
-    out.textContent = result && result.length ? result : "(no output)";
+    out.textContent = py.runPython(
+      "import sys, io\n_buf = io.StringIO()\n_so, _se = sys.stdout, sys.stderr\n" +
+      "sys.stdout = sys.stderr = _buf\ntry:\n    exec(compile(_user_code, '<student>', 'exec'), {})\n" +
+      "except Exception:\n    import traceback; traceback.print_exc()\n" +
+      "finally:\n    sys.stdout, sys.stderr = _so, _se\n_buf.getvalue()\n"
+    ) || "(no output)";
   }catch(e){
     out.textContent = "";
     err.textContent = e.message || "Something went wrong running your code.";
   }
 }
+
+$("pdfBtn").addEventListener("click", () => { save(); document.body.classList.add("printing"); window.print(); setTimeout(() => document.body.classList.remove("printing"), 500); });
 </script>
 </body>
 </html>
