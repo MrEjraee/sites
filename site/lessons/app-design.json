@@ -1,0 +1,55 @@
+{
+  "title": "Become an App Designer",
+  "intro": "Work through each part at your own pace, use your headphones for the videos, and press Save as you go.",
+  "blocks": [
+    {
+      "type": "text",
+      "html": "<h2>🏠 Introduction</h2><p>Today you are an <b>app designer</b>. By the end of the lesson you will have designed your very own app, from the name and logo all the way to the screens people tap on.</p><p><b>Learning objective:</b> to design an app for a chosen target audience, showing its screens and its features.</p><p><b>How this lesson works:</b> go through the activities in order, at your own speed. Put your headphones on before you start the videos. Everything you type is saved to your account.</p><ul><li>▶ Watch (5 mins)</li><li>🧠 Quiz 1</li><li>🎯 Main Challenge</li><li>🎥 Watch</li><li>🧩 Quiz 2</li><li>🎨 Creative Task</li><li>⭐ Extension</li><li>🏁 Finish &amp; Submit</li></ul>"
+    },
+    {
+      "type": "embed",
+      "title": "▶ Watch: How apps are designed (5 mins)",
+      "url": "https://www.youtube-nocookie.com/embed/PASTE_VIDEO_ID_HERE",
+      "height": 420,
+      "note": "Headphones on. Watch the whole video, then answer the quiz below. You can rewatch any part you need — there is no rush."
+    },
+    {
+      "type": "question",
+      "id": "q1",
+      "prompt": "🧠 <b>Quiz 1, question 1.</b> What is a <b>user interface</b>? Write one or two sentences.",
+      "criteria": "A good answer says the user interface is the part of the app the user sees and touches or interacts with, such as the buttons, menus and screens, and ideally that a good interface is easy to use."
+    },
+    {
+      "type": "question",
+      "id": "q2",
+      "prompt": "🧠 <b>Quiz 1, question 2.</b> What does <b>target audience</b> mean, and why does an app designer need to think about it?",
+      "criteria": "A good answer says the target audience is the group of people the app is made for (for example an age group or people with a shared interest), and gives a reason such as it changes the design, colours, language or features."
+    },
+    {
+      "type": "text",
+      "html": "<h2>🎯 Main Challenge — design your own app</h2><p>You are going to design a brand new app. Use <b>paper</b>, <b>Canva</b> or <b>PowerPoint</b> — whichever you prefer.</p><p>Your design must include all six things below:</p><ul><li>The <b>name</b> of your app</li><li>A <b>logo</b></li><li>The <b>home screen</b> (the first screen people see)</li><li><b>Three extra screens</b></li><li>The <b>features</b> — what the app can actually do</li><li>The <b>target audience</b> — who it is for</li></ul><p>Take your time on this. It is the biggest part of the lesson. Before you start drawing, plan it out in Quiz 2 below.</p><p>🎥 <b>Watch first:</b> the video above explains user interfaces, target audiences and features — rewatch it if you are stuck for ideas.</p>"
+    },
+    {
+      "type": "question",
+      "id": "q3",
+      "prompt": "🧩 <b>Quiz 2, question 1.</b> What is your app called, and who is your <b>target audience</b>? (For example: \"Chore Champ — for children aged 7 to 11.\")",
+      "criteria": "A good answer gives an app name and names a specific audience, such as an age group or a group with a shared need or interest, rather than saying everyone."
+    },
+    {
+      "type": "question",
+      "id": "q4",
+      "prompt": "🧩 <b>Quiz 2, question 2.</b> List <b>three features</b> your app will have, and say what problem your app solves for the people using it.",
+      "criteria": "A good answer lists three things the app can do (not three screens or three colours) and links the app to a clear problem, need or purpose for the chosen audience."
+    },
+    {
+      "type": "link",
+      "id": "link1",
+      "prompt": "🎨 Creative Task — paste the link to your finished design",
+      "note": "Finished designing? Save your work as a PDF, or take a photo of your paper design. Upload it to your OneDrive, choose Share, copy the link, and paste it into the box above. Then press Save my work. If you are stuck sharing it, tell your teacher."
+    },
+    {
+      "type": "text",
+      "html": "<h2>⭐ Extension</h2><p>Finished early? Watch a video about famous app success stories and see how the biggest apps in the world began.</p><p>Then answer this in your head, or talk to the person next to you: <b>what made those apps successful?</b> Was it the design, the idea, or something else?</p><h2>🏁 Finish &amp; Submit</h2><p>Before you leave, check you have done all of these:</p><ul><li>Answered all four quiz questions</li><li>Designed your app with a name, logo, home screen and three extra screens</li><li>Pasted the link to your design in the box above</li><li>Pressed <b>Save my work</b> — look for the green <b>Saved</b> label at the top</li></ul><p>Well done, app designer. 🎉</p>"
+    }
+  ]
+}
