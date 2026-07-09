@@ -70,3 +70,26 @@ details.answers pre{white-space:pre-wrap;font-family:var(--mono);font-size:12.5p
   .print-note{display:block !important;font-size:12px;color:#555}
 }
 .print-note{display:none}
+
+/* ---- interactive blocks: quiz, password meter, caesar cipher ---- */
+.quizq{padding:14px 0;border-bottom:1px solid var(--line)}
+.quizq:last-of-type{border-bottom:none}
+.quizq-text{font-weight:600;font-size:14.5px;margin-bottom:10px}
+.opts{display:grid;gap:8px}
+.opt{display:flex;align-items:flex-start;gap:10px;font-weight:400;font-size:14px;margin:0;padding:10px 12px;border:1px solid var(--line-strong);border-radius:10px;cursor:pointer;background:#fcfdfc}
+.opt:hover{border-color:var(--go)}
+.opt input{margin-top:3px;flex:none}
+.warnline{background:var(--warn-bg);border:1px solid var(--warn-line);color:#6b4708;border-radius:10px;padding:10px 12px;font-size:13.5px;margin:0 0 12px}
+.meter{height:10px;background:var(--line);border-radius:999px;overflow:hidden;margin:12px 0 8px}
+.meter-bar{height:100%;width:0;border-radius:999px;transition:width .18s ease,background .18s ease}
+.meter-bar[data-level=weak]{background:var(--danger)}
+.meter-bar[data-level=ok]{background:var(--warn)}
+.meter-bar[data-level=strong]{background:var(--ok)}
+.pw-verdict{font-weight:600;font-size:14px;min-height:21px}
+.pw-checks{list-style:none;padding:0;margin:10px 0 0;display:grid;gap:5px;font-size:13.5px}
+.pw-checks .pass{color:var(--ok)}
+.pw-checks .fail{color:var(--muted)}
+.cipher-text{font-family:var(--mono);font-size:16px;letter-spacing:.14em;background:#0f1f24;color:#e8efec;border-radius:10px;padding:16px;text-align:center;word-break:break-word}
+.cipher-out{font-family:var(--mono);font-size:16px;letter-spacing:.14em;background:var(--go-bg);border:1px solid #bfe0c8;color:var(--go-dark);border-radius:10px;padding:16px;text-align:center;margin:0 0 16px;word-break:break-word;min-height:22px}
+input[type=range]{flex:1;accent-color:var(--go)}
+@media print{.opt{break-inside:avoid}.meter,.cipher-out{display:none}}

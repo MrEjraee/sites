@@ -13,7 +13,6 @@
     <div class="brand"><b id="lessonTitle">Lesson</b><span><a href="index.html">&larr; All lessons</a></span></div>
     <div class="auth">
       <span class="chip" id="saveChip">Not saved yet</span>
-      <button class="btn-primary" id="saveBtn">Save my work</button>
       <button class="btn-ghost no-print" id="pdfBtn">Download as PDF</button>
     </div>
   </div>
@@ -34,7 +33,7 @@ const API = (window.HUB && window.HUB.WORKER_URL) || "";
 const token = localStorage.getItem("hub_token") || "";
 const $ = (id) => document.getElementById(id);
 const lessonId = new URLSearchParams(location.search).get("id") || "demo";
-const inputs = {};   // blockId -> element
+const fields = {};   // id -> { get(), set(v) }
 let lesson = null;
 
 if (!token) $("signinBanner").hidden = false;
@@ -45,8 +44,49 @@ function setChip(state){
   c.textContent = state==="saved" ? "Saved" : state==="saving" ? "Saving…" : state==="error" ? "Not saved" : "Not saved yet";
 }
 function el(tag, cls, html){ const e=document.createElement(tag); if(cls)e.className=cls; if(html!==undefined)e.innerHTML=html; return e; }
-function markDirty(){ setChip(""); }
 
+/* ---------- autosave -------------------------------------------------
+   Saves 2.5s after the student stops changing anything, never more often
+   than once every 6s, and never when nothing has actually changed. A full
+   lesson therefore costs a handful of database writes, not hundreds.
+   -------------------------------------------------------------------- */
+const AUTOSAVE_DELAY = 2500, MIN_GAP = 6000;
+let saveTimer = null, lastSent = "", lastSaveAt = 0, saving = false;
+
+function snapshot(){
+  const data = {};
+  Object.entries(fields).forEach(([id, f]) => { data[id] = f.get(); });
+  return data;
+}
+function markDirty(){
+  if (JSON.stringify(snapshot()) === lastSent) return; // nothing really changed
+  setChip("");
+  clearTimeout(saveTimer);
+  const wait = Math.max(AUTOSAVE_DELAY, MIN_GAP - (Date.now() - lastSaveAt));
+  saveTimer = setTimeout(save, wait);
+}
+async function save(){
+  if (saving) return;
+  if (!token || !API || API.indexOf("PASTE_") === 0) return;
+  const payload = JSON.stringify(snapshot());
+  if (payload === lastSent) return;
+  saving = true; setChip("saving");
+  try{
+    const r = await fetch(API + "/api/save", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json", Authorization:"Bearer " + token },
+      body: JSON.stringify({ lesson: lessonId, data: JSON.parse(payload) })
+    });
+    if (!r.ok) throw new Error((await r.json().catch(()=>({}))).error || "Could not save.");
+    lastSent = payload; lastSaveAt = Date.now(); setChip("saved");
+  }catch(e){ setChip("error"); }
+  saving = false;
+}
+// flush on leaving the page so nothing is lost
+window.addEventListener("pagehide", () => { clearTimeout(saveTimer); save(); });
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") save(); });
+
+/* ---------- load lesson ---------- */
 fetch("lessons/" + encodeURIComponent(lessonId) + ".json")
   .then(r => { if(!r.ok) throw new Error(); return r.json(); })
   .then(async (l) => {
@@ -59,114 +99,268 @@ fetch("lessons/" + encodeURIComponent(lessonId) + ".json")
   })
   .catch(() => { $("blocks").innerHTML = '<p class="err">Could not load this lesson. Check the lesson id in the address bar.</p>'; });
 
-function renderBlock(b, i){
-  const box = $("blocks");
-  if (b.type === "text"){
-    const s = el("section","station"); s.appendChild(el("div","", b.html)); box.appendChild(s); return;
-  }
-  if (b.type === "question"){
-    const s = el("section","station");
-    s.appendChild(el("label","", b.prompt));
-    const ta = el("textarea"); ta.rows = 3; ta.placeholder = "Type your answer…"; ta.addEventListener("input", markDirty);
-    inputs[b.id] = ta; s.appendChild(ta);
-    if (b.criteria){
-      const row = el("div","row no-print");
-      const btn = el("button","btn-ghost","Check my answer with AI");
-      const err = el("span","err");
-      const fb = el("div","feedback"); fb.hidden = true;
-      btn.addEventListener("click", () => checkAnswer(b, ta, btn, fb, err));
-      row.appendChild(btn); row.appendChild(err);
-      s.appendChild(row); s.appendChild(fb);
-    }
-    box.appendChild(s); return;
-  }
-  if (b.type === "python"){
-    const s = el("section","station");
-    if (b.task) s.appendChild(el("p","hint", b.task));
-    const ta = el("textarea","code"); ta.spellcheck = false; ta.value = b.starter || ""; ta.addEventListener("input", markDirty);
-    inputs[b.id] = ta; s.appendChild(ta);
-    const row = el("div","row no-print");
-    const run = el("button","btn-primary","Run");
-    const err = el("span","err");
-    const out = el("div","output"); out.setAttribute("aria-live","polite");
-    run.addEventListener("click", () => runPython(ta.value, out, err));
-    row.appendChild(run); row.appendChild(err);
-    s.appendChild(row); s.appendChild(out);
-    box.appendChild(s); return;
-  }
-  if (b.type === "embed"){
-    const s = el("section","station");
-    if (b.title) s.appendChild(el("label","", b.title));
-    if (b.note) s.appendChild(el("p","hint", b.note));
-    const f = el("iframe","embed"); f.src = b.url; f.height = b.height || 420;
-    f.setAttribute("allowfullscreen",""); f.title = b.title || "Embedded activity";
-    s.appendChild(f);
-    box.appendChild(s); return;
-  }
-  if (b.type === "link"){
-    const s = el("section","station");
-    s.appendChild(el("label","", b.prompt || "Paste your project link"));
-    if (b.note) s.appendChild(el("p","hint", b.note));
-    const inp = el("input"); inp.type = "text"; inp.placeholder = "https://…"; inp.addEventListener("input", markDirty);
-    inputs[b.id] = inp; s.appendChild(inp);
-    box.appendChild(s); return;
-  }
-}
-
-/* ---- save & load ---- */
 async function loadSaved(){
   try{
     const r = await fetch(API + "/api/work?lesson=" + encodeURIComponent(lessonId), { headers: { Authorization: "Bearer " + token } });
     const d = await r.json();
     if (r.ok && d.data){
-      Object.entries(d.data).forEach(([id, val]) => { if (inputs[id]) inputs[id].value = val; });
+      Object.entries(d.data).forEach(([id, val]) => { if (fields[id]) fields[id].set(val); });
+      lastSent = JSON.stringify(snapshot());
       setChip("saved");
     }
-  }catch(e){ /* offline or not configured — student can still work */ }
+  }catch(e){ /* offline — student can still work */ }
 }
-$("saveBtn").addEventListener("click", async () => {
-  if (!token){ $("signinBanner").hidden = false; window.scrollTo({top:0, behavior:"smooth"}); return; }
-  if (!API || API.indexOf("PASTE_")===0){ setChip("error"); alert("The site isn't connected to its server yet (config.js)."); return; }
-  setChip("saving");
-  const data = {};
-  Object.entries(inputs).forEach(([id, elmt]) => { data[id] = elmt.value; });
-  try{
-    const r = await fetch(API + "/api/save", {
-      method:"POST",
-      headers:{ "Content-Type":"application/json", Authorization:"Bearer " + token },
-      body: JSON.stringify({ lesson: lessonId, data })
-    });
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.error || "Could not save.");
-    setChip("saved");
-  }catch(e){ setChip("error"); alert(e.message); }
-});
-$("pdfBtn").addEventListener("click", () => window.print());
+$("pdfBtn").addEventListener("click", () => { save(); window.print(); });
 
-/* ---- AI checking ---- */
-async function checkAnswer(b, ta, btn, fb, err){
-  err.textContent = ""; fb.hidden = true;
-  if (!token){ err.textContent = "Sign in first so checks can be counted fairly."; return; }
-  if (!ta.value.trim()){ err.textContent = "Write an answer first."; return; }
-  btn.disabled = true; btn.textContent = "Checking…";
-  try{
-    const r = await fetch(API + "/api/check", {
-      method:"POST",
-      headers:{ "Content-Type":"application/json", Authorization:"Bearer " + token },
-      body: JSON.stringify({ question: b.prompt.replace(/<[^>]*>/g," "), criteria: b.criteria, answer: ta.value })
+/* ---------- helpers used by interactive blocks ---------- */
+function strHash(s){ let x = 5381; for (const c of s) x = ((x << 5) + x + c.charCodeAt(0)) >>> 0; return x; }
+function normLetters(s){ return (s || "").toUpperCase().replace(/[^A-Z]/g, ""); }
+
+/* ---------- block renderers ---------- */
+function renderBlock(b){
+  const box = $("blocks");
+  const R = { text:rText, question:rQuestion, python:rPython, embed:rEmbed, link:rLink,
+              quiz:rQuiz, password:rPassword, caesar:rCaesar }[b.type];
+  if (R) box.appendChild(R(b));
+}
+
+function rText(b){ const s = el("section","station"); s.appendChild(el("div","", b.html)); return s; }
+
+function rQuestion(b){
+  const s = el("section","station");
+  s.appendChild(el("label","", b.prompt));
+  const ta = el("textarea"); ta.rows = 3; ta.placeholder = "Type your answer…";
+  ta.addEventListener("input", markDirty);
+  fields[b.id] = { get: () => ta.value, set: (v) => { ta.value = v || ""; } };
+  s.appendChild(ta);
+  return s;
+}
+
+function rPython(b){
+  const s = el("section","station");
+  if (b.task) s.appendChild(el("p","hint", b.task));
+  const ta = el("textarea","code"); ta.spellcheck = false; ta.value = b.starter || "";
+  ta.addEventListener("input", markDirty);
+  fields[b.id] = { get: () => ta.value, set: (v) => { if (v) ta.value = v; } };
+  s.appendChild(ta);
+  const row = el("div","row no-print");
+  const run = el("button","btn-primary","Run"); const err = el("span","err");
+  const out = el("div","output"); out.setAttribute("aria-live","polite");
+  run.addEventListener("click", () => runPython(ta.value, out, err));
+  row.appendChild(run); row.appendChild(err);
+  s.appendChild(row); s.appendChild(out);
+  return s;
+}
+
+function rEmbed(b){
+  const s = el("section","station");
+  if (b.title) s.appendChild(el("label","", b.title));
+  if (b.note) s.appendChild(el("p","hint", b.note));
+  const f = el("iframe","embed"); f.src = b.url; f.height = b.height || 420;
+  f.setAttribute("allowfullscreen",""); f.title = b.title || "Embedded activity";
+  s.appendChild(f);
+  return s;
+}
+
+function rLink(b){
+  const s = el("section","station");
+  s.appendChild(el("label","", b.prompt || "Paste your link"));
+  if (b.note) s.appendChild(el("p","hint", b.note));
+  const inp = el("input"); inp.type = "text"; inp.placeholder = "https://…";
+  inp.addEventListener("input", markDirty);
+  fields[b.id] = { get: () => inp.value, set: (v) => { inp.value = v || ""; } };
+  s.appendChild(inp);
+  return s;
+}
+
+/* ---- QUIZ: multiple choice, marks itself, explains each answer ---- */
+function rQuiz(b){
+  const s = el("section","station");
+  if (b.title) s.appendChild(el("h2","", b.title));
+  if (b.note) s.appendChild(el("p","hint", b.note));
+  const chosen = new Array(b.questions.length).fill(null);
+  const groups = [];
+
+  b.questions.forEach((q, i) => {
+    const wrap = el("div","quizq");
+    wrap.appendChild(el("div","quizq-text", "<b>" + (i+1) + ".</b> " + q.q));
+    const opts = el("div","opts");
+    q.options.forEach((opt, j) => {
+      const id = b.id + "-" + i + "-" + j;
+      const lab = el("label","opt");
+      const radio = el("input"); radio.type = "radio"; radio.name = b.id + "-" + i; radio.id = id;
+      radio.addEventListener("change", () => { chosen[i] = j; markDirty(); });
+      lab.appendChild(radio);
+      lab.appendChild(el("span","", opt));
+      opts.appendChild(lab);
     });
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.error || "Could not check right now.");
-    fb.dataset.verdict = d.verdict;
-    fb.innerHTML = "<b></b><span></span>";
-    fb.querySelector("b").textContent = d.verdict === "correct" ? "Looking good" : d.verdict === "partly" ? "Nearly there" : "Not quite yet";
-    fb.querySelector("span").textContent = d.feedback;
+    wrap.appendChild(opts);
+    const fb = el("div","feedback"); fb.hidden = true;
+    wrap.appendChild(fb);
+    groups.push({ wrap, fb, opts });
+    s.appendChild(wrap);
+  });
+
+  const row = el("div","row no-print");
+  const btn = el("button","btn-primary","Check my answers");
+  const score = el("span","chip");
+  row.appendChild(btn); row.appendChild(score);
+  s.appendChild(row);
+
+  function mark(){
+    let right = 0;
+    b.questions.forEach((q, i) => {
+      const g = groups[i];
+      if (chosen[i] === null){ g.fb.hidden = true; return; }
+      const ok = chosen[i] === q.answer;
+      if (ok) right++;
+      g.fb.hidden = false;
+      g.fb.dataset.verdict = ok ? "correct" : "incorrect";
+      g.fb.innerHTML = "<b></b><span></span>";
+      g.fb.querySelector("b").textContent = ok ? "Correct" : "Not quite — try again";
+      g.fb.querySelector("span").textContent = ok ? (q.why || "") : (q.hint || "Read the question once more and pick another answer.");
+    });
+    const answered = chosen.filter(c => c !== null).length;
+    score.dataset.state = right === b.questions.length ? "saved" : "";
+    score.textContent = "Score: " + right + " / " + b.questions.length + (answered < b.questions.length ? " (some unanswered)" : "");
+    markDirty();
+  }
+  btn.addEventListener("click", mark);
+
+  fields[b.id] = {
+    get: () => ({ chosen, score: chosen.reduce((n, c, i) => n + (c === b.questions[i].answer ? 1 : 0), 0), outOf: b.questions.length }),
+    set: (v) => {
+      if (!v || !Array.isArray(v.chosen)) return;
+      v.chosen.forEach((c, i) => {
+        if (c === null || c === undefined) return;
+        chosen[i] = c;
+        const r = groups[i].opts.querySelectorAll("input")[c];
+        if (r) r.checked = true;
+      });
+      mark();
+    }
+  };
+  return s;
+}
+
+/* ---- PASSWORD: live strength meter. Nothing typed here is ever saved. ---- */
+const COMMON_PW = ["password","123456","12345678","qwerty","abc123","letmein","monkey","football","iloveyou","admin","welcome","dragon","sunshine","princess","password1","liverpool","arsenal","chelsea","minecraft","fortnite"];
+function rPassword(b){
+  const s = el("section","station");
+  if (b.title) s.appendChild(el("h2","", b.title));
+  if (b.task) s.appendChild(el("p","hint", b.task));
+  s.appendChild(el("p","warnline","🔒 Test made-up passwords only — never a real one. Nothing you type in this box is sent anywhere or saved."));
+
+  const inp = el("input"); inp.type = "text"; inp.autocomplete = "off"; inp.placeholder = "Try a password…";
+  s.appendChild(inp);
+  const meter = el("div","meter"); const bar = el("div","meter-bar"); meter.appendChild(bar); s.appendChild(meter);
+  const verdict = el("div","pw-verdict"); s.appendChild(verdict);
+  const checks = el("ul","pw-checks"); s.appendChild(checks);
+
+  let best = 0;
+  const rules = [
+    { label: "At least 12 characters long", test: (p) => p.length >= 12 },
+    { label: "Has capital letters and small letters", test: (p) => /[a-z]/.test(p) && /[A-Z]/.test(p) },
+    { label: "Has at least one number", test: (p) => /[0-9]/.test(p) },
+    { label: "Has a symbol, like ! ? # or £", test: (p) => /[^A-Za-z0-9]/.test(p) },
+    { label: "Is not a common or guessable password", test: (p) => p.length > 0 && !COMMON_PW.some(c => p.toLowerCase().includes(c)) },
+  ];
+
+  function update(){
+    const p = inp.value;
+    const passed = rules.map(r => r.test(p));
+    const n = passed.filter(Boolean).length;
+    checks.innerHTML = "";
+    rules.forEach((r, i) => {
+      const li = el("li", passed[i] ? "pass" : "fail");
+      li.textContent = (passed[i] ? "✓ " : "✗ ") + r.label;
+      checks.appendChild(li);
+    });
+    const pct = p ? (n / rules.length) * 100 : 0;
+    bar.style.width = pct + "%";
+    bar.dataset.level = n <= 2 ? "weak" : n <= 4 ? "ok" : "strong";
+    verdict.textContent = !p ? "" : n <= 2 ? "Weak — a hacker's computer could guess this very quickly." :
+                          n <= 4 ? "Getting better — keep going." : "Strong — well done!";
+    if (n > best){ best = n; markDirty(); }
+  }
+  inp.addEventListener("input", update);
+
+  // Only the best score is saved — never the password itself.
+  fields[b.id] = { get: () => ({ bestScore: best, outOf: rules.length }), set: (v) => { if (v && v.bestScore) best = v.bestScore; } };
+  return s;
+}
+
+/* ---- CAESAR: shift wheel + checked answer (plaintext stored as a hash) ---- */
+function rCaesar(b){
+  const s = el("section","station");
+  if (b.title) s.appendChild(el("h2","", b.title));
+  if (b.task) s.appendChild(el("p","hint", b.task));
+
+  s.appendChild(el("div","cipher-text", b.ciphertext));
+
+  const row = el("div","row no-print");
+  const lbl = el("label","", "Shift: <b id='" + b.id + "-sv'>0</b>");
+  lbl.style.margin = "0";
+  const slider = el("input"); slider.type = "range"; slider.min = "0"; slider.max = "25"; slider.value = "0";
+  slider.style.maxWidth = "260px";
+  row.appendChild(lbl); row.appendChild(slider);
+  s.appendChild(row);
+
+  const out = el("div","cipher-out");
+  s.appendChild(out);
+
+  function shiftBy(text, k){
+    return text.replace(/[A-Za-z]/g, (c) => {
+      const base = c === c.toUpperCase() ? 65 : 97;
+      return String.fromCharCode(((c.charCodeAt(0) - base - k + 26) % 26) + base);
+    });
+  }
+  function redraw(){
+    const k = parseInt(slider.value, 10);
+    document.getElementById(b.id + "-sv").textContent = k;
+    out.textContent = shiftBy(b.ciphertext, k);
+  }
+  slider.addEventListener("input", () => { redraw(); markDirty(); });
+  redraw();
+
+  s.appendChild(el("label","", b.prompt || "Type the secret message here:"));
+  const ans = el("input"); ans.type = "text"; ans.placeholder = "The message says…";
+  s.appendChild(ans);
+
+  const row2 = el("div","row no-print");
+  const btn = el("button","btn-primary","Check the message");
+  const fb = el("div","feedback"); fb.hidden = true;
+  row2.appendChild(btn);
+  s.appendChild(row2); s.appendChild(fb);
+
+  let solved = false;
+  btn.addEventListener("click", () => {
+    const ok = strHash(normLetters(ans.value)) === b.answerHash;
+    solved = solved || ok;
     fb.hidden = false;
-  }catch(e){ err.textContent = e.message; }
-  btn.disabled = false; btn.textContent = "Check my answer with AI";
+    fb.dataset.verdict = ok ? "correct" : "incorrect";
+    fb.innerHTML = "<b></b><span></span>";
+    fb.querySelector("b").textContent = ok ? "Code cracked!" : "Not yet";
+    fb.querySelector("span").textContent = ok
+      ? "Brilliant — you found the shift and read the hidden message."
+      : "Move the shift slider one step at a time and read the text underneath. When it turns into real English words, copy it into the box.";
+    markDirty();
+  });
+  ans.addEventListener("input", markDirty);
+
+  fields[b.id] = {
+    get: () => ({ shift: parseInt(slider.value, 10), answer: ans.value, solved }),
+    set: (v) => {
+      if (!v) return;
+      if (typeof v.shift === "number"){ slider.value = v.shift; redraw(); }
+      if (v.answer){ ans.value = v.answer; }
+      solved = !!v.solved;
+    }
+  };
+  return s;
 }
 
-/* ---- Python (Pyodide, loaded on first Run) ---- */
+/* ---------- Python (Pyodide, loaded on first Run) ---------- */
 let pyodide = null, pyLoading = null;
 async function ensurePyodide(out){
   if (pyodide) return pyodide;
