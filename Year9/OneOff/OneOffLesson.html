@@ -55,7 +55,7 @@
   }
 
   .task{
-    display:grid;grid-template-columns:132px 1fr;gap:0 16px;min-height:0;
+    display:grid;grid-template-columns:240px 1fr;gap:0 18px;min-height:0;
     background:var(--card);border:2px solid var(--ink);border-radius:16px;
     box-shadow:6px 6px 0 var(--accent);padding:16px;
   }
@@ -68,9 +68,9 @@
   }
   .eyebrow span{font-size:22px;line-height:1;letter-spacing:-.03em;color:var(--ink)}
 
-  .thumb{display:block;border-radius:10px;overflow:hidden;border:2px solid var(--ink);transition:transform .18s ease}
+  .thumb{display:block;flex:1;min-height:0;border-radius:10px;overflow:hidden;border:2px solid var(--ink);transition:transform .18s ease}
   .thumb:hover,.thumb:focus-visible{transform:translateY(-3px)}
-  .thumb svg{display:block;width:100%;height:auto}
+  .thumb svg{display:block;width:100%;height:100%;object-fit:cover}
 
   .go{
     text-align:center;
@@ -112,6 +112,9 @@
   @media (max-width:900px){
     html,body{height:auto}
     .grid{grid-template-columns:1fr;grid-template-rows:none;gap:20px}
+    .task{grid-template-columns:150px 1fr}
+    .thumb{flex:none;min-height:0}
+    .thumb svg{height:auto}
     .strip .push{margin-left:0}
     textarea{min-height:84px}
   }
@@ -140,7 +143,7 @@
       <div class="left">
         <p class="eyebrow">Task <span>01</span></p>
         <a class="thumb" href="https://beinternetawesome.withgoogle.com/en_uk/interland" target="_blank" rel="noopener" aria-label="Open Interland">
-          <svg viewBox="0 0 240 150" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <svg viewBox="0 0 240 150" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
             <rect width="240" height="150" fill="#FFF0F5"/>
             <circle cx="200" cy="30" r="22" fill="#D6336C" opacity=".18"/>
             <path d="M44 116 L120 88 L196 116 L120 144 Z" fill="#D6336C" opacity=".22"/>
@@ -160,7 +163,7 @@
       <div class="right">
         <h2><a href="https://beinternetawesome.withgoogle.com/en_uk/interland" target="_blank" rel="noopener">Interland</a></h2>
         <p class="host">beinternetawesome.withgoogle.com</p>
-        <p class="desc">An arcade game about staying safe online: dodge phishing scams, build a strong password, and decide what's worth sharing.</p>
+        <p class="desc">An arcade game about staying safe online — phishing, strong passwords and sharing.</p>
         <div class="skills">
           <label for="k1">Key skills learnt</label>
           <textarea id="k1" placeholder="What can you do now that you couldn't before?"></textarea>
@@ -173,7 +176,7 @@
       <div class="left">
         <p class="eyebrow">Task <span>02</span></p>
         <a class="thumb" href="https://blockly.games/?lang=en" target="_blank" rel="noopener" aria-label="Open Blockly Games">
-          <svg viewBox="0 0 240 150" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <svg viewBox="0 0 240 150" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
             <rect width="240" height="150" fill="#F3F0FE"/>
             <g stroke="#16233B" stroke-width="3" stroke-linejoin="round">
               <path d="M40 26 h78 v12 a9 9 0 0 0 18 0 V26 h30 v30 h-30 v-12 a9 9 0 0 0-18 0 v12 H40 Z" fill="#5F3DC4"/>
@@ -190,7 +193,7 @@
       <div class="right">
         <h2><a href="https://blockly.games/?lang=en" target="_blank" rel="noopener">Blockly Games</a></h2>
         <p class="host">blockly.games</p>
-        <p class="desc">Snap blocks together to solve mazes and puzzles. Each level gets harder, and you can flip any solution open to see the real JavaScript.</p>
+        <p class="desc">Snap blocks together to solve coding puzzles, then peek at the real JavaScript.</p>
         <div class="skills">
           <label for="k2">Key skills learnt</label>
           <textarea id="k2" placeholder="What can you do now that you couldn't before?"></textarea>
@@ -203,7 +206,7 @@
       <div class="left">
         <p class="eyebrow">Task <span>03</span></p>
         <a class="thumb" href="https://excelexercises.com/practice.html?lesson=89" target="_blank" rel="noopener" aria-label="Open Excel Exercises">
-          <svg viewBox="0 0 240 150" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <svg viewBox="0 0 240 150" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
             <rect width="240" height="150" fill="#EAF6EF"/>
             <rect x="30" y="22" width="180" height="106" rx="7" fill="#fff" stroke="#16233B" stroke-width="3"/>
             <rect x="30" y="22" width="180" height="20" rx="7" fill="#1D7A46"/>
@@ -229,7 +232,7 @@
       <div class="right">
         <h2><a href="https://excelexercises.com/practice.html?lesson=89" target="_blank" rel="noopener">Excel Exercises</a></h2>
         <p class="host">excelexercises.com</p>
-        <p class="desc">A live spreadsheet in the browser. Read the task, type the formula, press enter — it marks you instantly and lets you retry until it's right.</p>
+        <p class="desc">A live spreadsheet that marks your formulas instantly and lets you retry.</p>
         <div class="skills">
           <label for="k3">Key skills learnt</label>
           <textarea id="k3" placeholder="What can you do now that you couldn't before?"></textarea>
@@ -242,7 +245,7 @@
       <div class="left">
         <p class="eyebrow">Task <span>04</span></p>
         <a class="thumb" href="https://compute-it.toxicode.fr/" target="_blank" rel="noopener" aria-label="Open Compute It">
-          <svg viewBox="0 0 240 150" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <svg viewBox="0 0 240 150" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
             <rect width="240" height="150" fill="#FFF3EC"/>
             <rect x="30" y="24" width="90" height="102" rx="8" fill="#fff" stroke="#16233B" stroke-width="3"/>
             <rect x="42" y="40" width="50" height="6" rx="3" fill="#C2410C"/>
@@ -261,7 +264,7 @@
       <div class="right">
         <h2><a href="https://compute-it.toxicode.fr/" target="_blank" rel="noopener">Compute It</a></h2>
         <p class="host">compute-it.toxicode.fr</p>
-        <p class="desc">Be the computer. Step through a program one instruction at a time and predict exactly what it does — the best way to really understand how code runs.</p>
+        <p class="desc">Be the computer: step through a program and predict exactly what it does.</p>
         <div class="skills">
           <label for="k4">Key skills learnt</label>
           <textarea id="k4" placeholder="What can you do now that you couldn't before?"></textarea>
