@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Year 9 Computing — Three Tasks · 13 July 2026</title>
+<title>Year 9 Computing — Four Tasks · 13 July 2026</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -17,6 +17,7 @@
     --t1:#D6336C;
     --t2:#5F3DC4;
     --t3:#1D7A46;
+    --t4:#C2410C;
   }
 
   *{box-sizing:border-box}
@@ -24,7 +25,7 @@
   html,body{height:100%}
   body{
     margin:0;
-    padding:18px 22px 22px;
+    padding:16px 22px;
     display:flex;flex-direction:column;
     font-family:'Archivo',system-ui,sans-serif;
     color:var(--ink);
@@ -37,7 +38,7 @@
 
   .strip{
     display:flex;flex-wrap:wrap;gap:8px 26px;align-items:baseline;
-    padding-bottom:12px;border-bottom:2px solid var(--ink);flex:none;
+    padding-bottom:11px;border-bottom:2px solid var(--ink);flex:none;
   }
   .strip p{
     margin:0;font-family:'IBM Plex Mono',monospace;font-size:11.5px;letter-spacing:.14em;
@@ -47,49 +48,53 @@
   .strip .push{margin-left:auto}
 
   .grid{
-    flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:22px;
-    padding-top:20px;min-height:0;
+    flex:1;display:grid;
+    grid-template-columns:repeat(2,1fr);
+    grid-template-rows:repeat(2,1fr);
+    gap:16px;padding-top:16px;min-height:0;
   }
 
   .task{
-    display:flex;flex-direction:column;min-height:0;
+    display:grid;grid-template-columns:132px 1fr;gap:0 16px;min-height:0;
     background:var(--card);border:2px solid var(--ink);border-radius:16px;
-    box-shadow:7px 7px 0 var(--accent);padding:18px;
+    box-shadow:6px 6px 0 var(--accent);padding:16px;
   }
 
+  .left{display:flex;flex-direction:column;gap:10px;min-width:0}
   .eyebrow{
-    display:flex;align-items:baseline;gap:8px;margin:0 0 12px;
-    font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-weight:600;
+    display:flex;align-items:baseline;gap:7px;margin:0;
+    font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;
     letter-spacing:.14em;text-transform:uppercase;color:var(--accent);
   }
-  .eyebrow span{font-size:26px;line-height:1;letter-spacing:-.03em;color:var(--ink)}
+  .eyebrow span{font-size:22px;line-height:1;letter-spacing:-.03em;color:var(--ink)}
 
   .thumb{display:block;border-radius:10px;overflow:hidden;border:2px solid var(--ink);transition:transform .18s ease}
   .thumb:hover,.thumb:focus-visible{transform:translateY(-3px)}
   .thumb svg{display:block;width:100%;height:auto}
 
-  h2{font-size:23px;font-weight:800;letter-spacing:-.02em;line-height:1.1;margin:14px 0 4px}
-  h2 a{color:var(--ink);text-decoration:none;border-bottom:3px solid var(--accent)}
-  h2 a:hover{color:var(--accent)}
-  .host{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink-soft);margin:0 0 10px;word-break:break-all}
-  .desc{font-size:14.5px;line-height:1.5;margin:0 0 14px;color:var(--ink)}
-
   .go{
-    align-self:flex-start;
-    font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;
-    letter-spacing:.08em;text-transform:uppercase;text-decoration:none;
-    background:var(--ink);color:#fff;padding:10px 16px;border-radius:8px;
+    text-align:center;
+    font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;
+    letter-spacing:.06em;text-transform:uppercase;text-decoration:none;
+    background:var(--ink);color:#fff;padding:9px 8px;border-radius:8px;
   }
   .go:hover{background:var(--accent)}
 
-  .skills{margin-top:auto;padding-top:16px;display:flex;flex-direction:column;min-height:0}
+  .right{display:flex;flex-direction:column;min-width:0}
+  h2{font-size:20px;font-weight:800;letter-spacing:-.02em;line-height:1.1;margin:0 0 3px}
+  h2 a{color:var(--ink);text-decoration:none;border-bottom:3px solid var(--accent)}
+  h2 a:hover{color:var(--accent)}
+  .host{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);margin:0 0 8px;word-break:break-all}
+  .desc{font-size:13.5px;line-height:1.45;margin:0 0 12px;color:var(--ink)}
+
+  .skills{margin-top:auto;display:flex;flex-direction:column;min-height:0}
   .skills label{
-    display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;
-    letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:7px;
+    display:block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:600;
+    letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:6px;
   }
   textarea{
-    width:100%;flex:1;min-height:92px;resize:vertical;padding:12px 14px;
-    font-family:'Archivo',sans-serif;font-size:15px;line-height:1.55;color:var(--ink);
+    width:100%;flex:1;min-height:56px;resize:none;padding:10px 12px;
+    font-family:'Archivo',sans-serif;font-size:14px;line-height:1.5;color:var(--ink);
     background:var(--card);border:2px solid var(--rule);border-radius:10px;
   }
   textarea:focus{outline:none;border-color:var(--accent)}
@@ -104,17 +109,18 @@
   }
   .print:hover{background:var(--ink);color:#fff}
 
-  @media (max-width:920px){
+  @media (max-width:900px){
     html,body{height:auto}
-    .grid{grid-template-columns:1fr;gap:26px}
+    .grid{grid-template-columns:1fr;grid-template-rows:none;gap:20px}
     .strip .push{margin-left:0}
+    textarea{min-height:84px}
   }
   @media (prefers-reduced-motion:reduce){*{transition:none!important}}
   @media print{
     body{background:#fff;padding:0;height:auto}
     .go,.print{display:none}
     .task{box-shadow:none;break-inside:avoid}
-    .grid{grid-template-columns:1fr 1fr 1fr}
+    .grid{grid-template-rows:none}
   }
 </style>
 </head>
@@ -123,7 +129,7 @@
   <div class="strip">
     <p>Year 9 · Computing</p>
     <p>Monday <b>13 July 2026</b></p>
-    <p>Three tasks · <b>one lesson</b></p>
+    <p>Four tasks · <b>one lesson</b></p>
     <p class="push"><button class="print" onclick="window.print()">Print my answers</button></p>
   </div>
 
@@ -131,92 +137,135 @@
 
     <!-- TASK 1 -->
     <section class="task" style="--accent:var(--t1)">
-      <p class="eyebrow">Task <span>01</span></p>
-      <a class="thumb" href="https://beinternetawesome.withgoogle.com/en_uk/interland" target="_blank" rel="noopener" aria-label="Open Interland">
-        <svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <rect width="320" height="180" fill="#FFF0F5"/>
-          <circle cx="266" cy="36" r="26" fill="#D6336C" opacity=".18"/>
-          <path d="M64 138 L160 104 L256 138 L160 172 Z" fill="#D6336C" opacity=".22"/>
-          <path d="M64 138 L160 104 L256 138 L160 172 Z" fill="none" stroke="#16233B" stroke-width="3" stroke-linejoin="round"/>
-          <path d="M112 122 L160 105 L208 122 L208 138 L160 155 L112 138 Z" fill="#fff" stroke="#16233B" stroke-width="3" stroke-linejoin="round"/>
-          <rect x="134" y="46" width="52" height="50" rx="10" fill="#D6336C" stroke="#16233B" stroke-width="3"/>
-          <path d="M145 46 v-11 a15 15 0 0 1 30 0 v11" fill="none" stroke="#16233B" stroke-width="3"/>
-          <circle cx="160" cy="68" r="6.5" fill="#16233B"/>
-          <rect x="157" y="72" width="6" height="13" rx="3" fill="#16233B"/>
-          <path d="M160 96 v10" stroke="#16233B" stroke-width="3"/>
-          <circle cx="72" cy="44" r="5.5" fill="#16233B"/>
-          <circle cx="96" cy="28" r="4" fill="#D6336C"/>
-          <circle cx="250" cy="98" r="4.5" fill="#16233B"/>
-        </svg>
-      </a>
-      <h2><a href="https://beinternetawesome.withgoogle.com/en_uk/interland" target="_blank" rel="noopener">Interland</a></h2>
-      <p class="host">beinternetawesome.withgoogle.com</p>
-      <p class="desc">A four-island arcade game about staying safe online: dodge phishing scams, build a password that holds, and decide what's worth sharing.</p>
-      <a class="go" href="https://beinternetawesome.withgoogle.com/en_uk/interland" target="_blank" rel="noopener">Open Interland ↗</a>
-      <div class="skills">
-        <label for="k1">Key skills learnt</label>
-        <textarea id="k1" placeholder="What can you do now that you couldn't before?"></textarea>
+      <div class="left">
+        <p class="eyebrow">Task <span>01</span></p>
+        <a class="thumb" href="https://beinternetawesome.withgoogle.com/en_uk/interland" target="_blank" rel="noopener" aria-label="Open Interland">
+          <svg viewBox="0 0 240 150" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <rect width="240" height="150" fill="#FFF0F5"/>
+            <circle cx="200" cy="30" r="22" fill="#D6336C" opacity=".18"/>
+            <path d="M44 116 L120 88 L196 116 L120 144 Z" fill="#D6336C" opacity=".22"/>
+            <path d="M44 116 L120 88 L196 116 L120 144 Z" fill="none" stroke="#16233B" stroke-width="3" stroke-linejoin="round"/>
+            <path d="M82 104 L120 90 L158 104 L158 116 L120 130 L82 116 Z" fill="#fff" stroke="#16233B" stroke-width="3" stroke-linejoin="round"/>
+            <rect x="98" y="40" width="44" height="42" rx="9" fill="#D6336C" stroke="#16233B" stroke-width="3"/>
+            <path d="M107 40 v-9 a13 13 0 0 1 26 0 v9" fill="none" stroke="#16233B" stroke-width="3"/>
+            <circle cx="120" cy="58" r="5.5" fill="#16233B"/>
+            <rect x="117" y="61" width="6" height="12" rx="3" fill="#16233B"/>
+            <path d="M120 82 v9" stroke="#16233B" stroke-width="3"/>
+            <circle cx="52" cy="36" r="4.5" fill="#16233B"/>
+            <circle cx="74" cy="22" r="3.5" fill="#D6336C"/>
+          </svg>
+        </a>
+        <a class="go" href="https://beinternetawesome.withgoogle.com/en_uk/interland" target="_blank" rel="noopener">Open Interland ↗</a>
+      </div>
+      <div class="right">
+        <h2><a href="https://beinternetawesome.withgoogle.com/en_uk/interland" target="_blank" rel="noopener">Interland</a></h2>
+        <p class="host">beinternetawesome.withgoogle.com</p>
+        <p class="desc">An arcade game about staying safe online: dodge phishing scams, build a strong password, and decide what's worth sharing.</p>
+        <div class="skills">
+          <label for="k1">Key skills learnt</label>
+          <textarea id="k1" placeholder="What can you do now that you couldn't before?"></textarea>
+        </div>
       </div>
     </section>
 
     <!-- TASK 2 -->
     <section class="task" style="--accent:var(--t2)">
-      <p class="eyebrow">Task <span>02</span></p>
-      <a class="thumb" href="https://blockly.games/?lang=en" target="_blank" rel="noopener" aria-label="Open Blockly Games">
-        <svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <rect width="320" height="180" fill="#F3F0FE"/>
-          <g stroke="#16233B" stroke-width="3" stroke-linejoin="round">
-            <path d="M58 30 h106 v14 a10 10 0 0 0 20 0 V30 h40 v36 h-40 v-14 a10 10 0 0 0-20 0 v14 H58 Z" fill="#5F3DC4"/>
-            <path d="M78 74 h86 v14 a10 10 0 0 0 20 0 V74 h40 v36 h-40 v-14 a10 10 0 0 0-20 0 v14 H78 Z" fill="#fff"/>
-            <path d="M58 118 h106 v14 a10 10 0 0 0 20 0 v-14 h40 v36 h-40 v-14 a10 10 0 0 0-20 0 v14 H58 Z" fill="#5F3DC4" opacity=".45"/>
-          </g>
-          <rect x="72" y="41" width="34" height="6" rx="3" fill="#fff"/>
-          <rect x="92" y="85" width="46" height="6" rx="3" fill="#16233B" opacity=".35"/>
-          <rect x="72" y="129" width="28" height="6" rx="3" fill="#16233B" opacity=".45"/>
-        </svg>
-      </a>
-      <h2><a href="https://blockly.games/?lang=en" target="_blank" rel="noopener">Blockly Games</a></h2>
-      <p class="host">blockly.games</p>
-      <p class="desc">Snap blocks together to solve mazes and puzzles. Each level gets harder, and you can flip any solution open to see the real JavaScript underneath.</p>
-      <a class="go" href="https://blockly.games/?lang=en" target="_blank" rel="noopener">Open Blockly Games ↗</a>
-      <div class="skills">
-        <label for="k2">Key skills learnt</label>
-        <textarea id="k2" placeholder="What can you do now that you couldn't before?"></textarea>
+      <div class="left">
+        <p class="eyebrow">Task <span>02</span></p>
+        <a class="thumb" href="https://blockly.games/?lang=en" target="_blank" rel="noopener" aria-label="Open Blockly Games">
+          <svg viewBox="0 0 240 150" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <rect width="240" height="150" fill="#F3F0FE"/>
+            <g stroke="#16233B" stroke-width="3" stroke-linejoin="round">
+              <path d="M40 26 h78 v12 a9 9 0 0 0 18 0 V26 h30 v30 h-30 v-12 a9 9 0 0 0-18 0 v12 H40 Z" fill="#5F3DC4"/>
+              <path d="M56 62 h62 v12 a9 9 0 0 0 18 0 V62 h30 v30 h-30 v-12 a9 9 0 0 0-18 0 v12 H56 Z" fill="#fff"/>
+              <path d="M40 98 h78 v12 a9 9 0 0 0 18 0 v-12 h30 v30 h-30 v-12 a9 9 0 0 0-18 0 v12 H40 Z" fill="#5F3DC4" opacity=".45"/>
+            </g>
+            <rect x="52" y="35" width="28" height="5" rx="2.5" fill="#fff"/>
+            <rect x="68" y="71" width="38" height="5" rx="2.5" fill="#16233B" opacity=".35"/>
+            <rect x="52" y="107" width="24" height="5" rx="2.5" fill="#16233B" opacity=".45"/>
+          </svg>
+        </a>
+        <a class="go" href="https://blockly.games/?lang=en" target="_blank" rel="noopener">Open Blockly Games ↗</a>
+      </div>
+      <div class="right">
+        <h2><a href="https://blockly.games/?lang=en" target="_blank" rel="noopener">Blockly Games</a></h2>
+        <p class="host">blockly.games</p>
+        <p class="desc">Snap blocks together to solve mazes and puzzles. Each level gets harder, and you can flip any solution open to see the real JavaScript.</p>
+        <div class="skills">
+          <label for="k2">Key skills learnt</label>
+          <textarea id="k2" placeholder="What can you do now that you couldn't before?"></textarea>
+        </div>
       </div>
     </section>
 
     <!-- TASK 3 -->
     <section class="task" style="--accent:var(--t3)">
-      <p class="eyebrow">Task <span>03</span></p>
-      <a class="thumb" href="https://excelexercises.com/practice.html?lesson=89" target="_blank" rel="noopener" aria-label="Open Excel Exercises">
-        <svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <rect width="320" height="180" fill="#EAF6EF"/>
-          <rect x="46" y="26" width="228" height="128" rx="8" fill="#fff" stroke="#16233B" stroke-width="3"/>
-          <rect x="46" y="26" width="228" height="24" rx="8" fill="#1D7A46"/>
-          <rect x="46" y="42" width="228" height="8" fill="#1D7A46"/>
-          <g stroke="#16233B" stroke-width="2" opacity=".28">
-            <path d="M46 76 h228 M46 102 h228 M46 128 h228"/>
-            <path d="M104 50 v104 M160 50 v104 M216 50 v104"/>
-          </g>
-          <rect x="160" y="128" width="56" height="26" fill="#1D7A46" opacity=".18"/>
-          <rect x="160" y="128" width="56" height="26" fill="none" stroke="#1D7A46" stroke-width="3"/>
-          <text x="60" y="69" font-family="monospace" font-size="14" fill="#16233B">A</text>
-          <text x="116" y="69" font-family="monospace" font-size="14" fill="#16233B">14</text>
-          <text x="172" y="69" font-family="monospace" font-size="14" fill="#16233B">22</text>
-          <text x="228" y="69" font-family="monospace" font-size="14" fill="#16233B">9</text>
-          <text x="116" y="95" font-family="monospace" font-size="14" fill="#16233B">31</text>
-          <text x="172" y="95" font-family="monospace" font-size="14" fill="#16233B">6</text>
-          <text x="228" y="95" font-family="monospace" font-size="14" fill="#16233B">18</text>
-          <text x="56" y="146" font-family="monospace" font-size="13" fill="#1D7A46">=SUM(</text>
-        </svg>
-      </a>
-      <h2><a href="https://excelexercises.com/practice.html?lesson=89" target="_blank" rel="noopener">Excel Exercises</a></h2>
-      <p class="host">excelexercises.com</p>
-      <p class="desc">A live spreadsheet in the browser. Read the task, type the formula, press enter — it marks you instantly and lets you retry until the cell is right.</p>
-      <a class="go" href="https://excelexercises.com/practice.html?lesson=89" target="_blank" rel="noopener">Open Excel Exercises ↗</a>
-      <div class="skills">
-        <label for="k3">Key skills learnt</label>
-        <textarea id="k3" placeholder="What can you do now that you couldn't before?"></textarea>
+      <div class="left">
+        <p class="eyebrow">Task <span>03</span></p>
+        <a class="thumb" href="https://excelexercises.com/practice.html?lesson=89" target="_blank" rel="noopener" aria-label="Open Excel Exercises">
+          <svg viewBox="0 0 240 150" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <rect width="240" height="150" fill="#EAF6EF"/>
+            <rect x="30" y="22" width="180" height="106" rx="7" fill="#fff" stroke="#16233B" stroke-width="3"/>
+            <rect x="30" y="22" width="180" height="20" rx="7" fill="#1D7A46"/>
+            <rect x="30" y="35" width="180" height="7" fill="#1D7A46"/>
+            <g stroke="#16233B" stroke-width="2" opacity=".28">
+              <path d="M30 64 h180 M30 86 h180 M30 108 h180"/>
+              <path d="M82 42 v86 M126 42 v86 M170 42 v86"/>
+            </g>
+            <rect x="126" y="108" width="44" height="20" fill="#1D7A46" opacity=".18"/>
+            <rect x="126" y="108" width="44" height="20" fill="none" stroke="#1D7A46" stroke-width="3"/>
+            <text x="42" y="59" font-family="monospace" font-size="12" fill="#16233B">A</text>
+            <text x="92" y="59" font-family="monospace" font-size="12" fill="#16233B">14</text>
+            <text x="136" y="59" font-family="monospace" font-size="12" fill="#16233B">22</text>
+            <text x="182" y="59" font-family="monospace" font-size="12" fill="#16233B">9</text>
+            <text x="92" y="81" font-family="monospace" font-size="12" fill="#16233B">31</text>
+            <text x="136" y="81" font-family="monospace" font-size="12" fill="#16233B">6</text>
+            <text x="182" y="81" font-family="monospace" font-size="12" fill="#16233B">18</text>
+            <text x="40" y="123" font-family="monospace" font-size="12" fill="#1D7A46">=SUM(</text>
+          </svg>
+        </a>
+        <a class="go" href="https://excelexercises.com/practice.html?lesson=89" target="_blank" rel="noopener">Open Excel Exercises ↗</a>
+      </div>
+      <div class="right">
+        <h2><a href="https://excelexercises.com/practice.html?lesson=89" target="_blank" rel="noopener">Excel Exercises</a></h2>
+        <p class="host">excelexercises.com</p>
+        <p class="desc">A live spreadsheet in the browser. Read the task, type the formula, press enter — it marks you instantly and lets you retry until it's right.</p>
+        <div class="skills">
+          <label for="k3">Key skills learnt</label>
+          <textarea id="k3" placeholder="What can you do now that you couldn't before?"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- TASK 4 -->
+    <section class="task" style="--accent:var(--t4)">
+      <div class="left">
+        <p class="eyebrow">Task <span>04</span></p>
+        <a class="thumb" href="https://compute-it.toxicode.fr/" target="_blank" rel="noopener" aria-label="Open Compute It">
+          <svg viewBox="0 0 240 150" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <rect width="240" height="150" fill="#FFF3EC"/>
+            <rect x="30" y="24" width="90" height="102" rx="8" fill="#fff" stroke="#16233B" stroke-width="3"/>
+            <rect x="42" y="40" width="50" height="6" rx="3" fill="#C2410C"/>
+            <rect x="42" y="56" width="66" height="6" rx="3" fill="#16233B" opacity=".3"/>
+            <rect x="52" y="72" width="56" height="6" rx="3" fill="#16233B" opacity=".3"/>
+            <rect x="52" y="88" width="40" height="6" rx="3" fill="#16233B" opacity=".3"/>
+            <rect x="42" y="104" width="48" height="6" rx="3" fill="#C2410C"/>
+            <path d="M126 75 h34" stroke="#C2410C" stroke-width="4"/>
+            <path d="M152 67 l10 8 l-10 8" fill="none" stroke="#C2410C" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+            <rect x="170" y="52" width="44" height="46" rx="8" fill="#C2410C" opacity=".16" stroke="#16233B" stroke-width="3"/>
+            <text x="180" y="84" font-family="monospace" font-size="26" font-weight="bold" fill="#16233B">7</text>
+          </svg>
+        </a>
+        <a class="go" href="https://compute-it.toxicode.fr/" target="_blank" rel="noopener">Open Compute It ↗</a>
+      </div>
+      <div class="right">
+        <h2><a href="https://compute-it.toxicode.fr/" target="_blank" rel="noopener">Compute It</a></h2>
+        <p class="host">compute-it.toxicode.fr</p>
+        <p class="desc">Be the computer. Step through a program one instruction at a time and predict exactly what it does — the best way to really understand how code runs.</p>
+        <div class="skills">
+          <label for="k4">Key skills learnt</label>
+          <textarea id="k4" placeholder="What can you do now that you couldn't before?"></textarea>
+        </div>
       </div>
     </section>
 
