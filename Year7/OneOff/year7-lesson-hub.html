@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Year 7 Computing — AI Explorers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#16233B;
+    --ink-soft:#4A5872;
+    --paper:#EDF2EC;
+    --card:#FFFFFF;
+    --rule:#CBD6CC;
+    --t1:#6D28D9;
+    --t2:#1971C2;
+    --t3:#D6336C;
+    --t4:#1D7A46;
+  }
+
+  *{box-sizing:border-box}
+
+  html,body{height:100%}
+  body{
+    margin:0;
+    padding:16px 22px;
+    display:flex;flex-direction:column;
+    font-family:'Archivo',system-ui,sans-serif;
+    color:var(--ink);
+    background-color:var(--paper);
+    background-image:
+      linear-gradient(rgba(22,35,59,.055) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(22,35,59,.055) 1px, transparent 1px);
+    background-size:26px 26px;
+  }
+
+  .strip{
+    display:flex;flex-wrap:wrap;gap:8px 26px;align-items:baseline;
+    padding-bottom:11px;border-bottom:2px solid var(--ink);flex:none;
+  }
+  .strip p{
+    margin:0;font-family:'IBM Plex Mono',monospace;font-size:11.5px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--ink-soft);
+  }
+  .strip b{color:var(--ink);font-weight:600}
+  .strip .title{font-family:'Archivo';font-weight:800;font-size:15px;letter-spacing:0;text-transform:none;color:var(--ink)}
+  .strip .push{margin-left:auto}
+
+  .grid{
+    flex:1;display:grid;
+    grid-template-columns:repeat(2,1fr);
+    grid-template-rows:repeat(2,1fr);
+    gap:16px;padding-top:16px;min-height:0;
+  }
+
+  .task{
+    display:grid;grid-template-columns:240px 1fr;gap:0 18px;min-height:0;
+    background:var(--card);border:2px solid var(--ink);border-radius:16px;
+    box-shadow:6px 6px 0 var(--accent);padding:16px;
+  }
+
+  .left{display:flex;flex-direction:column;gap:10px;min-width:0}
+  .eyebrow{
+    display:flex;align-items:baseline;gap:7px;margin:0;
+    font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;
+    letter-spacing:.14em;text-transform:uppercase;color:var(--accent);
+  }
+  .eyebrow span{font-size:22px;line-height:1;letter-spacing:-.03em;color:var(--ink)}
+
+  .thumb{display:block;flex:1;min-height:0;border-radius:10px;overflow:hidden;border:2px solid var(--ink);transition:transform .18s ease;cursor:pointer}
+  .thumb:hover,.thumb:focus-visible{transform:translateY(-3px)}
+  .thumb svg{display:block;width:100%;height:100%;object-fit:cover}
+
+  .go{
+    text-align:center;
+    font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;
+    letter-spacing:.06em;text-transform:uppercase;text-decoration:none;
+    background:var(--ink);color:#fff;padding:9px 8px;border-radius:8px;cursor:pointer;
+  }
+  .go:hover{background:var(--accent)}
+
+  .right{display:flex;flex-direction:column;min-width:0}
+  h2{font-size:20px;font-weight:800;letter-spacing:-.02em;line-height:1.1;margin:0 0 3px}
+  h2 a{color:var(--ink);text-decoration:none;border-bottom:3px solid var(--accent);cursor:pointer}
+  h2 a:hover{color:var(--accent)}
+  .host{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);margin:0 0 8px;word-break:break-all}
+  .desc{font-size:13.5px;line-height:1.45;margin:0 0 12px;color:var(--ink)}
+
+  .skills{margin-top:auto;display:flex;flex-direction:column;min-height:0}
+  .skills label{
+    display:block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:600;
+    letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:6px;
+  }
+  textarea{
+    width:100%;flex:1;min-height:56px;resize:none;padding:10px 12px;
+    font-family:'Archivo',sans-serif;font-size:14px;line-height:1.5;color:var(--ink);
+    background:var(--card);border:2px solid var(--rule);border-radius:10px;
+  }
+  textarea:focus{outline:none;border-color:var(--accent)}
+  textarea::placeholder{color:#9AA6B4}
+
+  :focus-visible{outline:3px solid var(--t2);outline-offset:3px}
+
+  .print{
+    font-family:'IBM Plex Mono',monospace;font-size:11.5px;letter-spacing:.1em;
+    text-transform:uppercase;background:transparent;border:2px solid var(--ink);
+    color:var(--ink);padding:6px 14px;border-radius:7px;cursor:pointer;
+  }
+  .print:hover{background:var(--ink);color:#fff}
+
+  /* ---- device pop-up ---- */
+  .overlay{
+    position:fixed;inset:0;display:none;place-items:center;z-index:50;
+    background:rgba(22,35,59,.55);backdrop-filter:blur(2px);padding:20px;
+  }
+  .overlay.open{display:grid}
+  .modal{
+    background:var(--card);border:2px solid var(--ink);border-radius:18px;
+    box-shadow:8px 8px 0 var(--t2);padding:28px 30px;max-width:380px;width:100%;
+    text-align:center;position:relative;
+  }
+  .modal h3{margin:0 0 4px;font-size:22px;font-weight:800;letter-spacing:-.02em}
+  .modal .sub{margin:0 0 22px;font-size:14px;color:var(--ink-soft)}
+  .choices{display:flex;gap:14px;justify-content:center}
+  .choice{
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;
+    background:var(--card);border:2px solid var(--ink);border-radius:14px;padding:18px 10px;
+    font-family:'Archivo',sans-serif;font-size:15px;font-weight:700;color:var(--ink);
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .choice:hover{transform:translateY(-3px);box-shadow:5px 5px 0 var(--t2)}
+  .choice svg{width:42px;height:42px}
+  .close{
+    position:absolute;top:12px;right:14px;border:none;background:transparent;
+    font-size:24px;line-height:1;color:var(--ink-soft);cursor:pointer;
+  }
+  .close:hover{color:var(--ink)}
+  .qr-view{display:none}
+  .qr-view img{
+    width:220px;height:220px;object-fit:contain;border:2px solid var(--ink);
+    border-radius:12px;background:#fff;padding:8px;
+  }
+  .qr-view .back{
+    margin-top:16px;font-family:'IBM Plex Mono',monospace;font-size:12px;
+    letter-spacing:.06em;text-transform:uppercase;background:transparent;
+    border:2px solid var(--ink);color:var(--ink);padding:8px 16px;border-radius:8px;cursor:pointer;
+  }
+  .qr-view .back:hover{background:var(--ink);color:#fff}
+
+  @media (max-width:900px){
+    html,body{height:auto}
+    .grid{grid-template-columns:1fr;grid-template-rows:none;gap:20px}
+    .task{grid-template-columns:150px 1fr}
+    .thumb{flex:none;min-height:0}
+    .thumb svg{height:auto}
+    .strip .push{margin-left:0}
+    textarea{min-height:84px}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+  @media print{
+    body{background:#fff;padding:0;height:auto}
+    .go,.print,.overlay{display:none!important}
+    .task{box-shadow:none;break-inside:avoid}
+    .grid{grid-template-rows:none}
+  }
+</style>
+</head>
+<body>
+
+  <div class="strip">
+    <p class="title">AI Explorers</p>
+    <p>Year 7 · Computing</p>
+    <p>Four tasks · <b>one lesson</b></p>
+    <p class="push"><button class="print" onclick="window.print()">Print my answers</button></p>
+  </div>
+
+  <div class="grid">
+
+    <!-- TASK 1 — AI Quests -->
+    <section class="task" style="--accent:var(--t1)">
+      <div class="left">
+        <p class="eyebrow">Task <span>01</span></p>
+        <a class="thumb" href="https://research.google/ai-quests/intl/en_gb" target="_blank" rel="noopener" aria-label="Open AI Quests">
+          <svg viewBox="0 0 240 150" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <rect width="240" height="150" fill="#F3EEFE"/>
+            <g stroke="#16233B" stroke-width="2.5" opacity=".55">
+              <path d="M58 108 L104 66 L150 92 L192 44"/>
+            </g>
+            <g fill="#6D28D9" stroke="#16233B" stroke-width="2.5">
+              <circle cx="58" cy="108" r="9"/>
+              <circle cx="104" cy="66" r="9"/>
+              <circle cx="150" cy="92" r="9"/>
+            </g>
+            <path d="M192 44 v-26 l30 12 -30 12" fill="#6D28D9" stroke="#16233B" stroke-width="2.5" stroke-linejoin="round"/>
+            <path d="M192 20 v54" stroke="#16233B" stroke-width="2.5"/>
+            <g fill="#6D28D9">
+              <path d="M40 40 l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3z"/>
+              <path d="M168 118 l2 6 6 2 -6 2 -2 6 -2 -6 -6 -2 6 -2z" opacity=".7"/>
+            </g>
+          </svg>
+        </a>
+        <a class="go" href="https://research.google/ai-quests/intl/en_gb" target="_blank" rel="noopener">Open AI Quests ↗</a>
+      </div>
+      <div class="right">
+        <h2><a href="https://research.google/ai-quests/intl/en_gb" target="_blank" rel="noopener">AI Quests</a></h2>
+        <p class="host">research.google</p>
+        <p class="desc">Step into a Google researcher's shoes: collect data and train your own AI to predict real-world floods.</p>
+        <div class="skills">
+          <label for="k1">Key skills learnt</label>
+          <textarea id="k1" placeholder="What can you do now that you couldn't before?"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- TASK 2 — Quick, Draw! -->
+    <section class="task" style="--accent:var(--t2)">
+      <div class="left">
+        <p class="eyebrow">Task <span>02</span></p>
+        <a class="thumb" data-quickdraw href="https://quickdraw.withgoogle.com/" aria-label="Play Quick, Draw!">
+          <svg viewBox="0 0 240 150" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <rect width="240" height="150" fill="#E7F1FB"/>
+            <path d="M52 96 q6 -34 30 -34 q22 0 22 22 q0 20 -22 20 q-14 0 -18 -10" fill="none" stroke="#1971C2" stroke-width="5" stroke-linecap="round"/>
+            <circle cx="70" cy="76" r="3.5" fill="#16233B"/>
+            <path d="M96 104 l40 -58" stroke="#16233B" stroke-width="3" stroke-linecap="round" opacity=".35" stroke-dasharray="2 7"/>
+            <g transform="rotate(38 150 78)">
+              <rect x="140" y="30" width="20" height="70" rx="4" fill="#FFD43B" stroke="#16233B" stroke-width="2.5"/>
+              <path d="M140 100 h20 l-10 18 z" fill="#F1B0A0" stroke="#16233B" stroke-width="2.5" stroke-linejoin="round"/>
+              <path d="M145 112 h10 l-5 9 z" fill="#16233B"/>
+              <rect x="140" y="30" width="20" height="9" fill="#1971C2" stroke="#16233B" stroke-width="2.5"/>
+            </g>
+            <text x="178" y="52" font-family="Archivo, sans-serif" font-size="34" font-weight="800" fill="#1971C2">?</text>
+          </svg>
+        </a>
+        <a class="go" data-quickdraw href="https://quickdraw.withgoogle.com/">Play Quick, Draw! ↗</a>
+      </div>
+      <div class="right">
+        <h2><a data-quickdraw href="https://quickdraw.withgoogle.com/">Quick, Draw!</a></h2>
+        <p class="host">quickdraw.withgoogle.com</p>
+        <p class="desc">You get 20 seconds to doodle a word while a neural network races to guess what you're drawing.</p>
+        <div class="skills">
+          <label for="k2">Key skills learnt</label>
+          <textarea id="k2" placeholder="What can you do now that you couldn't before?"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- TASK 3 — Say What You See -->
+    <section class="task" style="--accent:var(--t3)">
+      <div class="left">
+        <p class="eyebrow">Task <span>03</span></p>
+        <a class="thumb" href="https://artsandculture.google.com/experiment/say-what-you-see/jwG3m7wQShZngw?hl=en" target="_blank" rel="noopener" aria-label="Open Say What You See">
+          <svg viewBox="0 0 240 150" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <rect width="240" height="150" fill="#FCECF2"/>
+            <rect x="34" y="30" width="104" height="80" rx="8" fill="#fff" stroke="#16233B" stroke-width="3"/>
+            <circle cx="60" cy="52" r="8" fill="#FFD43B" stroke="#16233B" stroke-width="2.5"/>
+            <path d="M40 96 L70 66 L92 88 L108 74 L132 96 Z" fill="#D6336C" opacity=".3"/>
+            <path d="M40 96 L70 66 L92 88 L108 74 L132 96" fill="none" stroke="#16233B" stroke-width="2.5" stroke-linejoin="round"/>
+            <g>
+              <rect x="150" y="52" width="60" height="42" rx="12" fill="#D6336C" stroke="#16233B" stroke-width="3"/>
+              <path d="M164 94 l-6 14 16 -8z" fill="#D6336C" stroke="#16233B" stroke-width="3" stroke-linejoin="round"/>
+              <rect x="160" y="66" width="40" height="4.5" rx="2" fill="#fff"/>
+              <rect x="160" y="76" width="28" height="4.5" rx="2" fill="#fff"/>
+            </g>
+          </svg>
+        </a>
+        <a class="go" href="https://artsandculture.google.com/experiment/say-what-you-see/jwG3m7wQShZngw?hl=en" target="_blank" rel="noopener">Open Say What You See ↗</a>
+      </div>
+      <div class="right">
+        <h2><a href="https://artsandculture.google.com/experiment/say-what-you-see/jwG3m7wQShZngw?hl=en" target="_blank" rel="noopener">Say What You See</a></h2>
+        <p class="host">artsandculture.google.com</p>
+        <p class="desc">Describe a picture in words and watch an AI try to recreate it — great practice at writing clear prompts.</p>
+        <div class="skills">
+          <label for="k3">Key skills learnt</label>
+          <textarea id="k3" placeholder="What can you do now that you couldn't before?"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- TASK 4 — Semantris -->
+    <section class="task" style="--accent:var(--t4)">
+      <div class="left">
+        <p class="eyebrow">Task <span>04</span></p>
+        <a class="thumb" href="https://research.google.com/semantris/" target="_blank" rel="noopener" aria-label="Open Semantris">
+          <svg viewBox="0 0 240 150" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <rect width="240" height="150" fill="#E7F4EC"/>
+            <g stroke="#16233B" stroke-width="2.5">
+              <rect x="70" y="24" width="100" height="24" rx="6" fill="#1D7A46"/>
+              <rect x="52" y="54" width="118" height="24" rx="6" fill="#40C057" opacity=".85"/>
+              <rect x="84" y="84" width="86" height="24" rx="6" fill="#fff"/>
+              <rect x="66" y="114" width="104" height="24" rx="6" fill="#1D7A46" opacity=".45"/>
+            </g>
+            <rect x="86" y="31" width="40" height="5" rx="2.5" fill="#fff"/>
+            <rect x="68" y="61" width="52" height="5" rx="2.5" fill="#fff"/>
+            <rect x="100" y="91" width="46" height="5" rx="2.5" fill="#16233B" opacity=".4"/>
+            <path d="M178 66 h34 m-12 -8 l12 8 -12 8" fill="none" stroke="#1D7A46" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </a>
+        <a class="go" href="https://research.google.com/semantris/" target="_blank" rel="noopener">Open Semantris ↗</a>
+      </div>
+      <div class="right">
+        <h2><a href="https://research.google.com/semantris/" target="_blank" rel="noopener">Semantris</a></h2>
+        <p class="host">research.google.com</p>
+        <p class="desc">A word-association game: type a clue and machine learning ranks how well it matches the target word.</p>
+        <div class="skills">
+          <label for="k4">Key skills learnt</label>
+          <textarea id="k4" placeholder="What can you do now that you couldn't before?"></textarea>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Quick, Draw! device pop-up -->
+  <div class="overlay" id="qdOverlay" role="dialog" aria-modal="true" aria-labelledby="qdTitle">
+    <div class="modal">
+      <button class="close" onclick="closeQuickDraw()" aria-label="Close">&times;</button>
+
+      <div class="choose-view" id="chooseView">
+        <h3 id="qdTitle">Quick, Draw!</h3>
+        <p class="sub">Do you want to play on your:</p>
+        <div class="choices">
+          <button class="choice" onclick="showQR()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#16233B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="4" y="2" width="16" height="20" rx="2"/>
+              <line x1="12" y1="18" x2="12" y2="18"/>
+            </svg>
+            iPad
+          </button>
+          <button class="choice" onclick="openComputer()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#16233B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="2" y="4" width="20" height="13" rx="2"/>
+              <line x1="8" y1="21" x2="16" y2="21"/>
+              <line x1="12" y1="17" x2="12" y2="21"/>
+            </svg>
+            Computer
+          </button>
+        </div>
+      </div>
+
+      <div class="qr-view" id="qrView">
+        <h3>Scan to play</h3>
+        <p class="sub">Point your iPad camera at the code:</p>
+        <img src="qr.png" alt="QR code to open Quick, Draw!">
+        <div><button class="back" onclick="backToChoice()">← Back</button></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const overlay   = document.getElementById('qdOverlay');
+  const chooseView= document.getElementById('chooseView');
+  const qrView    = document.getElementById('qrView');
+  const QD_URL    = 'https://quickdraw.withgoogle.com/';
+
+  function openQuickDraw(e){
+    if (e) e.preventDefault();
+    chooseView.style.display = 'block';
+    qrView.style.display = 'none';
+    overlay.classList.add('open');
+  }
+  function closeQuickDraw(){ overlay.classList.remove('open'); }
+  function showQR(){ chooseView.style.display = 'none'; qrView.style.display = 'block'; }
+  function backToChoice(){ qrView.style.display = 'none'; chooseView.style.display = 'block'; }
+  function openComputer(){ window.open(QD_URL, '_blank', 'noopener'); closeQuickDraw(); }
+
+  // Intercept every Quick, Draw! trigger (thumbnail, play button, title link)
+  document.querySelectorAll('[data-quickdraw]').forEach(el=>{
+    el.addEventListener('click', openQuickDraw);
+  });
+
+  // Dismiss on backdrop click or Escape
+  overlay.addEventListener('click', e=>{ if (e.target === overlay) closeQuickDraw(); });
+  document.addEventListener('keydown', e=>{ if (e.key === 'Escape') closeQuickDraw(); });
+</script>
+</body>
+</html>
