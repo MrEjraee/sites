@@ -91,27 +91,27 @@
 
   /* ---- finished early / own projects ---- */
   .projects{
-    flex:none;display:grid;grid-template-columns:auto 1fr 1fr;gap:0 18px;align-items:center;
-    background:var(--card);border:2px dashed var(--ink);border-radius:16px;padding:12px 16px;
+    flex:none;display:grid;grid-template-columns:auto 1fr 1fr;gap:0 24px;align-items:center;
+    background:var(--card);border:2px dashed var(--ink);border-radius:16px;padding:20px 22px;
   }
-  .projects .head{max-width:210px;padding-right:16px;border-right:2px solid var(--rule)}
-  .projects .head h3{margin:0 0 3px;font-size:17px;font-weight:800;letter-spacing:-.02em}
-  .projects .head p{margin:0;font-size:12.5px;line-height:1.4;color:var(--ink-soft)}
+  .projects .head{max-width:240px;padding-right:22px;border-right:2px solid var(--rule)}
+  .projects .head h3{margin:0 0 4px;font-size:21px;font-weight:800;letter-spacing:-.02em}
+  .projects .head p{margin:0;font-size:14px;line-height:1.4;color:var(--ink-soft)}
 
-  .opt{display:flex;align-items:center;gap:12px;min-width:0}
+  .opt{display:flex;align-items:center;gap:15px;min-width:0}
   .opt .icon{
-    flex:none;width:46px;height:46px;display:grid;place-items:center;
-    border:2px solid var(--ink);border-radius:11px;background:var(--card);
+    flex:none;width:60px;height:60px;display:grid;place-items:center;
+    border:2px solid var(--ink);border-radius:13px;background:var(--card);
   }
-  .opt .icon svg{width:26px;height:26px}
+  .opt .icon svg{width:34px;height:34px}
   .opt .txt{min-width:0}
-  .opt .txt h4{margin:0 0 2px;font-size:15px;font-weight:800;letter-spacing:-.01em}
-  .opt .txt p{margin:0;font-size:12.5px;line-height:1.4;color:var(--ink-soft)}
+  .opt .txt h4{margin:0 0 3px;font-size:18px;font-weight:800;letter-spacing:-.01em}
+  .opt .txt p{margin:0;font-size:14px;line-height:1.45;color:var(--ink-soft)}
   .opt .txt a{color:var(--ink);font-weight:700;text-decoration:none;border-bottom:2px solid var(--accent)}
   .opt .txt a:hover{color:var(--accent)}
   kbd{
-    font-family:'IBM Plex Mono',monospace;font-size:11px;background:var(--paper);
-    border:1.5px solid var(--rule);border-bottom-width:3px;border-radius:5px;padding:1px 5px;color:var(--ink);
+    font-family:'IBM Plex Mono',monospace;font-size:12px;background:var(--paper);
+    border:1.5px solid var(--rule);border-bottom-width:3px;border-radius:5px;padding:1px 6px;color:var(--ink);
   }
 
   :focus-visible{outline:3px solid var(--t3);outline-offset:3px}
@@ -234,38 +234,30 @@
       </div>
     </section>
 
-    <!-- TASK 4 — Blockly Music -->
+    <!-- TASK 4 — Blockly Games -->
     <section class="task" style="--accent:var(--t4)">
       <div class="left">
         <p class="eyebrow">Task <span>04</span></p>
-        <a class="thumb" href="https://blockly.games/music?lang=en" target="_blank" rel="noopener" aria-label="Open Blockly Games Music">
+        <a class="thumb" href="https://blockly.games/?lang=en" target="_blank" rel="noopener" aria-label="Open Blockly Games">
           <svg viewBox="0 0 240 150" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
             <rect width="240" height="150" fill="#F3F0FE"/>
-            <g stroke="#16233B" stroke-width="2.5" stroke-linejoin="round">
-              <path d="M24 34 h56 v11 a8 8 0 0 0 16 0 V34 h26 v28 h-26 v-11 a8 8 0 0 0-16 0 v11 H24 Z" fill="#5F3DC4"/>
-              <path d="M38 70 h42 v11 a8 8 0 0 0 16 0 V70 h26 v28 h-26 v-11 a8 8 0 0 0-16 0 v11 H38 Z" fill="#fff"/>
-              <path d="M24 106 h56 v11 a8 8 0 0 0 16 0 v-11 h26 v28 h-26 v-11 a8 8 0 0 0-16 0 v11 H24 Z" fill="#5F3DC4" opacity=".45"/>
+            <g stroke="#16233B" stroke-width="3" stroke-linejoin="round">
+              <path d="M40 22 h78 v12 a9 9 0 0 0 18 0 V22 h34 v30 h-34 v-12 a9 9 0 0 0-18 0 v12 H40 Z" fill="#5F3DC4"/>
+              <path d="M56 60 h62 v12 a9 9 0 0 0 18 0 V60 h34 v30 h-34 v-12 a9 9 0 0 0-18 0 v12 H56 Z" fill="#fff"/>
+              <path d="M56 98 h62 v12 a9 9 0 0 0 18 0 V98 h34 v30 h-34 v-12 a9 9 0 0 0-18 0 v12 H56 Z" fill="#fff"/>
+              <path d="M40 136 h78 v12 h-78 Z" fill="#5F3DC4" opacity=".45"/>
             </g>
-            <g stroke="#16233B" stroke-width="1.6" opacity=".3">
-              <path d="M150 44 h84 M150 58 h84 M150 72 h84 M150 86 h84 M150 100 h84"/>
-            </g>
-            <g fill="#5F3DC4" stroke="#16233B" stroke-width="2.5">
-              <ellipse cx="172" cy="86" rx="9" ry="6.5" transform="rotate(-20 172 86)"/>
-              <ellipse cx="212" cy="65" rx="9" ry="6.5" transform="rotate(-20 212 65)"/>
-            </g>
-            <g stroke="#16233B" stroke-width="2.5" fill="none">
-              <path d="M180 84 V44"/>
-              <path d="M220 63 V30"/>
-              <path d="M180 44 q22 4 40 -14" stroke-width="5"/>
-            </g>
+            <rect x="52" y="31" width="30" height="5" rx="2.5" fill="#fff"/>
+            <rect x="68" y="69" width="40" height="5" rx="2.5" fill="#16233B" opacity=".35"/>
+            <rect x="68" y="107" width="28" height="5" rx="2.5" fill="#16233B" opacity=".35"/>
           </svg>
         </a>
-        <a class="go" href="https://blockly.games/music?lang=en" target="_blank" rel="noopener">Open Blockly Music ↗</a>
+        <a class="go" href="https://blockly.games/?lang=en" target="_blank" rel="noopener">Open Blockly Games ↗</a>
       </div>
       <div class="right">
-        <h2><a href="https://blockly.games/music?lang=en" target="_blank" rel="noopener">Blockly Games: Music</a></h2>
+        <h2><a href="https://blockly.games/?lang=en" target="_blank" rel="noopener">Blockly Games</a></h2>
         <p class="host">blockly.games</p>
-        <p class="desc">Build a tune out of code blocks. Use loops and functions to layer melodies into a full round.</p>
+        <p class="desc">Eight block-coding challenges — mazes, turtle drawing, music and more. Flip any level open to see the real JavaScript.</p>
       </div>
     </section>
 
