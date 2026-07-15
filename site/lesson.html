@@ -13,7 +13,6 @@
   <a class="home" href="index.html">&larr; All lessons</a>
   <span class="sep">/</span>
   <div class="title" id="lessonTitle">Lesson</div>
-  <span class="chip" id="saveWarn" hidden>Not saving on this PC</span>
   <button class="btn-primary no-print" id="pdfBtn">Download PDF</button>
 </div>
 
@@ -45,13 +44,13 @@
   <button class="btn-primary btn-continue" id="nextBtn">Continue &rarr;</button>
 </div>
 
-<div class="modal-back no-print" id="leaveModal" hidden>
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-    <p class="modal-eyebrow">Before you go</p>
-    <h2 id="modalTitle">Download your work first</h2>
-    <p class="modal-text">Your work is only saved on <b>this computer</b>. If you leave without downloading your PDF, you could lose it.</p>
-    <button class="btn-primary modal-cta" id="modalPdf">⤓ &nbsp;Download PDF</button>
-    <button class="btn-ghost modal-stay" id="modalStay">Keep working</button>
+<div class="modal-back no-print" id="finishModal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="finTitle">
+    <p class="modal-eyebrow">Lesson complete</p>
+    <h2 id="finTitle">Save your work!</h2>
+    <p class="modal-text">Your work is <b>only on this computer</b>. It is <b>not</b> saved to your account.<br>Download the PDF and put it in your OneDrive folder.</p>
+    <button class="btn-primary modal-cta" id="modalPdf">&#10515; &nbsp;Download PDF</button>
+    <button class="btn-ghost modal-stay" id="modalStay">Not yet - keep working</button>
   </div>
 </div>
 
@@ -71,18 +70,18 @@ const WORK_KEY = "hub_work_" + lessonId;
 const fields = {};   // id -> { get, set }
 const steps  = [];   // { section, check(), brief:{eyebrow,title,text} }
 let step = 0, bypassed = false, lesson = null;
+let finished = false;          // set once they press Finish
+let restoredWork = false;      // did we put saved work back on the page?
+let resumeShown = false;       // the "welcome back" note is strictly one-shot
 let pdfDone = false;   // becomes true once they've downloaded their PDF
 
 
 function el(tag, cls, html){ const e=document.createElement(tag); if(cls)e.className=cls; if(html!==undefined)e.innerHTML=html; return e; }
-/* No "Saved" badge on purpose: it made students think their work had gone to
-   the cloud. Silence means saving is working; we only speak up when it isn't. */
-function setChip(state){
-  const w = $("saveWarn");
-  if (!w) return;
-  w.hidden = state !== "error";
-  w.dataset.state = "error";
-}
+/* Saving is deliberately silent. Any badge — even a warning — made students
+   think their work was safe somewhere. The PDF is the only hand-in, and the
+   finish pop-up says so plainly. The one exception is a genuine storage
+   failure while adding a picture, which is loud because it is actionable. */
+function setChip(){ /* intentionally does nothing */ }
 function strHash(s){ let x = 5381; for (const c of s) x = ((x << 5) + x + c.charCodeAt(0)) >>> 0; return x; }
 function normLetters(s){ return (s || "").toUpperCase().replace(/[^A-Z]/g, ""); }
 function wordCount(s){ return (s || "").trim().split(/\s+/).filter(Boolean).length; }
@@ -119,58 +118,6 @@ function save(){
 window.addEventListener("pagehide", () => { clearTimeout(saveTimer); save(); });
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") save(); });
 
-/* ---------- keeping them from losing work ----------
-   A site cannot block closing, and it cannot read the browser's own
-   "Leave site?" dialog. But JavaScript is frozen while that dialog is open —
-   so a timer started just beforehand can only ever run if the student chose
-   to STAY. That's how we know to show our own reminder afterwards.
-   We also watch for the mouse heading up out of the page (towards the tab's
-   close button), which lets us warn them before they even click.          */
-let modalOpen = false;
-
-window.addEventListener("beforeunload", (e) => {
-  if (pdfDone) return;                 // handed in — let them go
-  if (!hasRealWork()) return;          // nothing to lose — don't nag
-  save();
-  e.preventDefault();
-  e.returnValue = "";                  // triggers the browser's own dialog
-  setTimeout(() => { if (!pdfDone) showLeaveModal(); }, 60);  // only runs if they stayed
-});
-
-document.addEventListener("mouseout", (e) => {
-  if (pdfDone || modalOpen || !hasRealWork()) return;
-  // Pointer has left the top edge of the window: heading for the tab bar.
-  if (e.clientY <= 0 && !e.relatedTarget) showLeaveModal();
-});
-
-function showLeaveModal(){
-  if (modalOpen || pdfDone) return;
-  modalOpen = true;
-  $("leaveModal").hidden = false;
-  $("modalPdf").focus();
-}
-function hideLeaveModal(){
-  modalOpen = false;
-  $("leaveModal").hidden = true;
-}
-$("modalStay").addEventListener("click", hideLeaveModal);
-$("modalPdf").addEventListener("click", () => { hideLeaveModal(); downloadPdf(); });
-$("leaveModal").addEventListener("click", (e) => { if (e.target === $("leaveModal")) hideLeaveModal(); });
-document.addEventListener("keydown", (e) => { if (e.key === "Escape" && modalOpen) hideLeaveModal(); });
-
-function hasRealWork(){
-  return Object.entries(fields).some(([id, f]) => {
-    const v = f.get();
-    if (typeof v === "string") return v.trim().length > 0;
-    if (typeof v === "boolean") return v;
-    if (v && typeof v === "object"){
-      if (Array.isArray(v.chosen)) return v.chosen.some(c => c !== null && c !== undefined);
-      if (typeof v.bestScore === "number") return v.bestScore > 0;
-      if (v.answer) return String(v.answer).trim().length > 0;
-    }
-    return false;
-  });
-}
 
 /* ---------- load ---------- */
 fetch("lessons/" + encodeURIComponent(lessonId) + ".json")
@@ -201,8 +148,7 @@ function loadSaved(){
     Object.entries(d).forEach(([id, val]) => { if (fields[id]) fields[id].set(val); });
     if (typeof d.__step === "number") step = Math.min(Math.max(d.__step, 0), steps.length - 1);
     lastSaved = JSON.stringify(snapshot());
-    setChip("saved");
-    $("resumeNote").hidden = false;
+    restoredWork = true;
   }catch(e){ /* corrupt or unavailable — start fresh */ }
 }
 
@@ -216,11 +162,15 @@ function showStep(i){
   step = Math.min(Math.max(i, 0), steps.length - 1);
   steps.forEach((s, n) => { s.section.hidden = (n !== step); });
 
-  Array.from($("tracker").children).forEach((seg, n) => {
-    seg.className = "seg" + (n < step ? " done" : n === step ? " now" : "");
-  });
+  paintTracker();
 
-  const b = steps[step].brief;
+  // The welcome-back note belongs to the page they came back to, and nowhere
+  // else. Show it on that first render only, then never again.
+  $("resumeNote").hidden = true;
+  if (restoredWork && !resumeShown){ $("resumeNote").hidden = false; resumeShown = true; }
+
+  const sb = steps[step].brief;
+  const b = (typeof sb === "function") ? sb() : sb;
   $("briefEyebrow").textContent = b.eyebrow || "Your task";
   $("briefTitle").textContent = b.title || "";
   $("briefText").textContent = b.text || "";
@@ -243,18 +193,38 @@ function refreshGate(){
 }
 $("backBtn").addEventListener("click", () => showStep(step - 1));
 $("nextBtn").addEventListener("click", () => {
-  if (step === steps.length - 1){
-    save();
-    $("briefEyebrow").textContent = "Last thing";
-    $("briefTitle").textContent = "Finished — now download your PDF.";
-    $("briefText").textContent = "Press Download PDF at the top. In the box that appears, choose Save as PDF, then hand that file in. Your work is only saved on this computer, so do not skip this.";
-    $("nextBtn").textContent = "Download PDF ⤓";
-    $("nextBtn").disabled = false;
-    $("nextBtn").onclick = downloadPdf;
-    return;
-  }
+  if (step === steps.length - 1){ finishLesson(); return; }
   showStep(step + 1);
 });
+
+function paintTracker(){
+  Array.from($("tracker").children).forEach((seg, n) => {
+    // Once finished, every segment is complete — including the last one, which
+    // previously stayed amber forever because "n < step" can never include it.
+    seg.className = "seg" + (finished ? " done" : n < step ? " done" : n === step ? " now" : "");
+  });
+}
+
+function finishLesson(){
+  save();
+  finished = true;
+  paintTracker();
+  $("stageName").textContent = "Complete";
+  $("briefEyebrow").textContent = "Complete";
+  $("briefTitle").textContent = "Well done — now save your work.";
+  $("briefText").textContent = "Your work only exists on this computer. Download the PDF and put it in your OneDrive folder.";
+  $("nextBtn").textContent = "Save your work ⤓";
+  $("nextBtn").onclick = showFinishModal;
+  showFinishModal();
+}
+
+/* ---------- finish pop-up ---------- */
+function showFinishModal(){ $("finishModal").hidden = false; $("modalPdf").focus(); }
+function hideFinishModal(){ $("finishModal").hidden = true; }
+$("modalStay").addEventListener("click", hideFinishModal);
+$("modalPdf").addEventListener("click", () => { hideFinishModal(); downloadPdf(); });
+$("finishModal").addEventListener("click", (e) => { if (e.target === $("finishModal")) hideFinishModal(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") hideFinishModal(); });
 
 /* ---------- bypass ---------- */
 $("bypassDot").addEventListener("click", askBypass);
@@ -266,7 +236,8 @@ function askBypass(){
   if (strHash(code.trim()) === wanted){
     bypassed = true;
     document.body.classList.add("bypassed");
-    refreshGate();
+    steps.forEach(st => { if (st.unlock) st.unlock(); });
+    showStep(step);
   } else {
     alert("That code is not right.");
   }
@@ -278,7 +249,7 @@ function renderBlock(b, i){
   // to store their state, or they silently fail to restore. Give them one.
   if (!b.id) b.id = b.type + "_" + i;
   const R = { text:rText, question:rQuestion, python:rPython, embed:rEmbed, link:rLink,
-              quiz:rQuiz, password:rPassword, caesar:rCaesar }[b.type];
+              quiz:rQuiz, password:rPassword, caesar:rCaesar, image:rImage }[b.type];
   if (!R){ console.warn("Unknown block type:", b.type); return; }
   let built;
   try { built = R(b); }
@@ -288,6 +259,7 @@ function renderBlock(b, i){
     s.appendChild(el("p","err","This activity could not be displayed. Continue and tell your teacher."));
     built = { section:s, check:() => ({ ok:true }), brief:{ eyebrow:"Notice", title:"Activity unavailable", text:"" } };
   }
+  built = applyLock(b, built);
   built.section.hidden = true;
   $("blocks").appendChild(built.section);
   steps.push(built);
@@ -551,6 +523,151 @@ function rCaesar(b){
            brief:{ eyebrow:"Puzzle", title:stripTags(b.title) || "Caesar cipher", text:b.task || "Move the slider until the message makes sense." } };
 }
 
+/* ---------- teacher-released tasks ----------
+   A block with a "lockCode" stays shut until the teacher reads out the code.
+   No server, no database: the code's hash lives in the lesson file, so the
+   code itself can't be found by viewing the page source. It's a pacing tool,
+   not security — a determined student could poke at browser storage.        */
+function applyLock(b, built){
+  if (!b.lockCode) return built;
+  const KEY = "hub_unlock_" + lessonId + "_" + b.id;
+  let unlocked = false;
+  try{ unlocked = localStorage.getItem(KEY) === "1"; }catch(e){}
+
+  const panel = el("div","lockpanel");
+  panel.appendChild(el("div","lock-mark","&#128274;"));
+  panel.appendChild(el("p","lock-title", b.lockTitle || "Waiting for your teacher"));
+  panel.appendChild(el("p","lock-text", b.lockHint || "Your teacher will give you the code when the class is ready."));
+  const row = el("div","lock-row");
+  const inp = el("input"); inp.type = "text"; inp.placeholder = "Enter code"; inp.autocomplete = "off";
+  const btn = el("button","btn-primary","Unlock");
+  row.appendChild(inp); row.appendChild(btn);
+  panel.appendChild(row);
+  const msg = el("p","lock-msg");
+  panel.appendChild(msg);
+  built.section.appendChild(panel);
+  if (!unlocked) built.section.classList.add("locked");
+
+  function tryCode(){
+    if (strHash(inp.value.trim().toUpperCase()) === b.lockCode){
+      unlocked = true;
+      try{ localStorage.setItem(KEY, "1"); }catch(e){}
+      built.section.classList.remove("locked");
+      showStep(step);           // repaint the brief now the task is open
+    } else {
+      msg.textContent = "That code is not right. Check with your teacher.";
+    }
+  }
+  btn.addEventListener("click", tryCode);
+  inp.addEventListener("keydown", (e) => { if (e.key === "Enter") tryCode(); });
+
+  const origCheck = built.check;
+  const origBrief = built.brief;
+  return {
+    section: built.section,
+    check: () => (unlocked || bypassed) ? origCheck() : { ok:false, message:"Wait for your teacher to give you the code" },
+    brief: () => (unlocked || bypassed) ? origBrief : {
+      eyebrow: "Locked",
+      title: b.lockTitle || "Waiting for your teacher",
+      text: b.lockHint || "Your teacher will give you the code when the class is ready."
+    },
+    unlock: () => { unlocked = true; built.section.classList.remove("locked"); }
+  };
+}
+
+/* ---------- IMAGE: paste a screenshot, or pick a file ----------
+   Pictures are shrunk in the browser before they are stored. A raw screenshot
+   can be 2 MB; browser storage only has about 5 MB in total, so we scale to
+   1000px and re-encode as JPEG, which typically lands near 100-150 KB.      */
+function shrinkImage(file, cb){
+  if (!file || !/^image\//.test(file.type)){ cb(null, "That file is not a picture."); return; }
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => {
+    const MAX = 1000;
+    let w = img.width, h = img.height;
+    if (w > MAX || h > MAX){ const r = Math.min(MAX/w, MAX/h); w = Math.round(w*r); h = Math.round(h*r); }
+    const c = document.createElement("canvas");
+    c.width = w; c.height = h;
+    c.getContext("2d").drawImage(img, 0, 0, w, h);
+    URL.revokeObjectURL(url);
+    let out = c.toDataURL("image/jpeg", 0.7);
+    if (out.length > 900000) out = c.toDataURL("image/jpeg", 0.45);   // still huge: squeeze harder
+    cb(out, null);
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); cb(null, "That picture could not be opened."); };
+  img.src = url;
+}
+
+function rImage(b){
+  const s = el("section");
+  let dataUrl = "";
+
+  const zone = el("div","paste-zone");
+  zone.appendChild(el("p","paste-big", "Press <kbd>Ctrl</kbd> + <kbd>V</kbd> to paste your screenshot"));
+  zone.appendChild(el("p","paste-sub", b.hint || "Take a screenshot first: hold <b>Windows</b> + <b>Shift</b> + <b>S</b> and drag a box around your work. Then click this page and press Ctrl + V."));
+  const orRow = el("div","paste-or");
+  const fileBtn = el("button","btn-ghost","or choose a picture file");
+  const fileInp = el("input"); fileInp.type = "file"; fileInp.accept = "image/*";
+  fileInp.style.display = "none";
+  orRow.appendChild(fileBtn); orRow.appendChild(fileInp);
+  zone.appendChild(orRow);
+  s.appendChild(zone);
+
+  const shot = el("div","shot"); shot.hidden = true;
+  const img = el("img","shot-img");
+  const shotRow = el("div","row");
+  const redo = el("button","btn-ghost","Replace picture");
+  shotRow.appendChild(redo);
+  shot.appendChild(img); shot.appendChild(shotRow);
+  s.appendChild(shot);
+
+  const err = el("p","err");
+  s.appendChild(err);
+
+  function accept(file){
+    err.textContent = "";
+    shrinkImage(file, (out, problem) => {
+      if (problem){ err.textContent = problem; return; }
+      dataUrl = out;
+      img.src = out;
+      shot.hidden = false;
+      zone.hidden = true;
+      try{
+        markDirty(); save();
+      }catch(e){
+        err.textContent = "That picture is too big to store. Download your PDF now to keep your work.";
+      }
+    });
+  }
+  fileBtn.addEventListener("click", () => fileInp.click());
+  fileInp.addEventListener("change", () => { if (fileInp.files && fileInp.files[0]) accept(fileInp.files[0]); });
+  redo.addEventListener("click", () => { shot.hidden = true; zone.hidden = false; });
+
+  // Ctrl+V anywhere on the page, but only while this activity is the one on screen.
+  document.addEventListener("paste", (e) => {
+    if (!steps[step] || steps[step].section !== s) return;
+    const items = (e.clipboardData && e.clipboardData.items) || [];
+    for (let i = 0; i < items.length; i++){
+      if (items[i].type && items[i].type.indexOf("image") === 0){
+        e.preventDefault();
+        accept(items[i].getAsFile());
+        return;
+      }
+    }
+    err.textContent = "There was no picture on the clipboard. Take a screenshot first with Windows + Shift + S.";
+  });
+
+  fields[b.id] = {
+    get: () => dataUrl,
+    set: (v) => { if (v){ dataUrl = v; img.src = v; shot.hidden = false; zone.hidden = true; } }
+  };
+  return { section:s,
+           check: () => dataUrl ? { ok:true } : { ok:false, message:"Add a screenshot to continue" },
+           brief: { eyebrow:"Screenshot", title: stripTags(b.title) || "Add a screenshot of your work",
+                    text: b.task || "Paste a screenshot of your work below." } };
+}
+
 /* ---------- Python via Pyodide ---------- */
 let pyodide = null, pyLoading = null;
 async function ensurePyodide(out){
@@ -755,6 +872,26 @@ function buildPdf(){
       heading(stripHtml(b.prompt) || "Link handed in");
       const url = (v || "").trim();
       write(url || "(no link pasted)", { size:10, color: url ? "#0B5FA5" : "#B03A2E" });
+      gap(4); return;
+    }
+
+    if (b.type === "image"){
+      heading(stripHtml(b.title) || "Screenshot");
+      if (v){
+        try{
+          const p = doc.getImageProperties(v);
+          let iw = W, ih = (p.height / p.width) * W;
+          const maxH = BOTTOM - M;                 // never taller than a page
+          if (ih > maxH){ ih = maxH; iw = (p.width / p.height) * ih; }
+          room(ih);
+          doc.addImage(v, "JPEG", M, y, iw, ih);
+          y += ih + 3;
+        }catch(e){
+          write("(the picture could not be added to this PDF)", { size:10, color:"#B03A2E" });
+        }
+      } else {
+        write("(no screenshot added)", { size:10, color:"#B03A2E" });
+      }
       gap(4); return;
     }
 

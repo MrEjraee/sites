@@ -72,20 +72,9 @@ fetch("lessons/index.json").then(r => r.json()).then(list => {
     const a = document.createElement("a");
     a.className = "lessonCard"; a.href = "lesson.html?id=" + encodeURIComponent(l.id);
     a.innerHTML = '<span class="num">' + String(i+1).padStart(2,"0") + '</span>' +
-                  '<span class="body"><b></b><span></span></span>' +
-                  '<span class="status" hidden>In progress</span><span class="go">&rarr;</span>';
+                  '<span class="body"><b></b><span></span></span><span class="go">&rarr;</span>';
     a.querySelector("b").textContent = l.title;
     a.querySelector(".body span").textContent = l.description || "";
-    // show which lessons they've already started on this computer
-    try{
-      const raw = localStorage.getItem("hub_work_" + l.id);
-      if (raw){
-        const st = a.querySelector(".status");
-        st.hidden = false;
-        const d = JSON.parse(raw);
-        if (d.__saved) st.textContent = "Saved " + new Date(d.__saved).toLocaleDateString("en-GB");
-      }
-    }catch(e){}
     box.appendChild(a);
   });
   if (!list.length) box.innerHTML = '<p class="hint">No lessons yet.</p>';
