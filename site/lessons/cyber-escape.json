@@ -158,13 +158,18 @@
     },
     {
       "type": "text",
-      "html": "<h2>🏆 Final challenge — Escape the hacker</h2><p>You have beaten all five missions. To escape for good, teach everybody else how to stay safe.</p><p><b>Your task:</b> design a <b>cybersecurity poster</b> for students in Year 7. Use paper, Canva or PowerPoint.</p><p>Your poster must include all five of these:</p><ul><li>A <b>title</b> that grabs attention</li><li><b>Two warning signs</b> of a phishing email (use Mission 2 to help you)</li><li><b>Three rules</b> for making a strong password (use Mission 3)</li><li>One sentence explaining <b>what encryption does</b> (use Mission 4)</li><li>Something a Year 7 should do <b>if they think they have been hacked</b></li></ul><p><b>Make it clear, not crowded.</b> Big text, short sentences, and a picture or icon for each rule. Imagine it on the wall of the computing room — could someone understand it from two metres away?</p><p><b>Stuck for a title?</b> Try starting with a question, like \"Would <i>you</i> spot a fake email?\"</p>"
+      "html": "<h2>🏆 Final challenge — Escape the hacker</h2><p>You have beaten all five missions. To escape for good, teach everybody else how to stay safe.</p><p><b>Your task:</b> design a <b>cybersecurity poster</b> for students in Year 7. Use paper, Canva or PowerPoint.</p><p>Your poster must include all five of these:</p><ul><li>A <b>title</b> that grabs attention</li><li><b>Two warning signs</b> of a phishing email (use Mission 2 to help you)</li><li><b>Three rules</b> for making a strong password (use Mission 3)</li><li>One sentence explaining <b>what encryption does</b> (use Mission 4)</li><li>Something a Year 7 should do <b>if they think they have been hacked</b></li></ul><p><b>Make it clear, not crowded.</b> Big text, short sentences, and a picture or icon for each rule. Imagine it on the wall of the computing room — could someone understand it from two metres away?</p><p><b>Stuck for a title?</b> Try starting with a question, like \"Would <i>you</i> spot a fake email?\"</p>",
+      "lockCode": 3359652066,
+      "lockTitle": "Final challenge is locked",
+      "lockHint": "Your teacher will give you the code when everyone has finished the five missions.",
+      "id": "final_lock"
     },
     {
-      "type": "link",
-      "id": "link1",
-      "prompt": "🏁 Paste the link to your finished poster",
-      "note": "Save your poster as a PDF, or photograph your paper design. Upload it to your OneDrive, choose Share, copy the link, and paste it above. Your work saves automatically. If you cannot get the link to work, tell your teacher — do not lose your poster!"
+      "type": "image",
+      "id": "poster1",
+      "title": "Hand in your poster",
+      "task": "Take a screenshot of your finished poster and paste it here.",
+      "hint": "To take a screenshot: hold <b>Windows</b> + <b>Shift</b> + <b>S</b>, drag a box around your poster, then click this page and press Ctrl + V."
     }
   ]
 }
