@@ -5,40 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Computing lesson hub</title>
 <link rel="stylesheet" href="style.css">
-<script src="config.js"></script>
 </head>
 <body>
 
 <div class="homebar">
   <div class="title">Computing hub</div>
-  <div class="auth" id="auth" aria-live="polite"></div>
 </div>
 
 <div class="page">
 
   <div class="masthead">
     <p class="eyebrow">Computing</p>
-    <h1 id="headline">Sign in to start</h1>
-    <p id="subline">Your work saves as you go, so you can pick up exactly where you left off.</p>
+    <h1>Pick a lesson to start</h1>
+    <p id="subline">Your work is saved on this computer as you go. At the end, download your PDF and put it in your OneDrive folder.</p>
   </div>
 
-  <section class="station" id="loginCard">
-    <div class="grid3">
-      <div>
-        <label for="username">Username</label>
-        <input type="text" id="username" autocomplete="username" placeholder="e.g. jsmith">
-      </div>
-      <div>
-        <label for="pin">Password</label>
-        <input type="password" id="pin" autocomplete="current-password" placeholder="Your password">
-      </div>
-    </div>
-    <div class="row" style="margin-top:18px">
-      <button class="btn-primary" id="loginBtn">Sign in</button>
-      <span class="err" id="loginErr" role="alert"></span>
-    </div>
-    <p class="hint" style="margin:16px 0 0">Forgotten your password? Ask your teacher to reset it.</p>
-  </section>
+  <div class="banner" id="storageWarn" hidden>
+    ⚠︎ This browser won't let the site save your work. Tell your teacher before you start.
+  </div>
 
   <h2 style="margin:36px 0 16px; font-size:22px">Lessons</h2>
   <div id="lessonList" class="lessons"><p class="hint">Loading lessons…</p></div>
@@ -46,55 +30,62 @@
 </div>
 
 <script>
-const API = (window.HUB && window.HUB.WORKER_URL) || "";
 const $ = (id) => document.getElementById(id);
 
-function renderAuth(){
-  const name = localStorage.getItem("hub_name");
-  if (name && localStorage.getItem("hub_token")){
-    $("auth").innerHTML = '<span class="who">Signed in as <b></b></span> <button class="btn-ghost" id="outBtn">Sign out</button>';
-    $("auth").querySelector("b").textContent = name;
-    $("outBtn").addEventListener("click", () => {
-      localStorage.removeItem("hub_token"); localStorage.removeItem("hub_name"); renderAuth();
-    });
-    $("loginCard").hidden = true;
-    $("headline").textContent = "Welcome back, " + name.split(" ")[0] + ".";
-    $("subline").textContent = "Pick a lesson below. Everything you type saves by itself.";
-  } else {
-    $("auth").innerHTML = '<span class="who">Not signed in</span>';
-    $("loginCard").hidden = false;
-    $("headline").textContent = "Sign in to start";
-    $("subline").textContent = "Your work saves as you go, so you can pick up exactly where you left off.";
-  }
-}
-renderAuth();
+/* Check storage actually works before a student relies on it. */
+try{
+  localStorage.setItem("hub_test","1"); localStorage.removeItem("hub_test");
+}catch(e){ $("storageWarn").hidden = false; }
 
-$("loginBtn").addEventListener("click", async () => {
-  $("loginErr").textContent = "";
-  if (!API || API.indexOf("PASTE_") === 0){ $("loginErr").textContent = "This site isn't connected to its server yet."; return; }
-  try{
-    const r = await fetch(API + "/api/login", {
-      method:"POST", headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ username: $("username").value, password: $("pin").value, pin: $("pin").value })
-    });
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.error || "Sign-in failed.");
-    localStorage.setItem("hub_token", d.token);
-    localStorage.setItem("hub_name", d.name);
-    renderAuth();
-  }catch(e){ $("loginErr").textContent = e.message; }
-});
-$("pin").addEventListener("keydown", (e) => { if (e.key === "Enter") $("loginBtn").click(); });
+
+/* ---------- housekeeping ----------
+   Clear saved work for lessons that are no longer in index.json (i.e. the
+   unit has moved on) or that are older than MAX_AGE_DAYS. Each lesson is
+   only ~0.5 KB, so this reclaims little space — but it keeps limited school
+   profiles tidy and stops old units lingering for years.
+   NOTE: removing a lesson from index.json deletes any unfinished work for it
+   on every student's machine, so take it out of the list only once the class
+   has handed their PDFs in.                                                */
+const MAX_AGE_DAYS = 60;
+
+function pruneStorage(validIds){
+  const keep = new Set(validIds.map(id => "hub_work_" + id));
+  const cutoff = Date.now() - MAX_AGE_DAYS * 86400000;
+  const doomed = [];
+  for (let i = 0; i < localStorage.length; i++){
+    const k = localStorage.key(i);
+    if (!k || k.indexOf("hub_work_") !== 0) continue;
+    if (!keep.has(k)){ doomed.push(k); continue; }          // lesson retired
+    try{
+      const d = JSON.parse(localStorage.getItem(k));
+      if (d.__saved && new Date(d.__saved).getTime() < cutoff) doomed.push(k);  // stale
+    }catch(e){ doomed.push(k); }                             // unreadable
+  }
+  doomed.forEach(k => localStorage.removeItem(k));
+  return doomed.length;
+}
 
 fetch("lessons/index.json").then(r => r.json()).then(list => {
+  try{ pruneStorage(list.map(l => l.id)); }catch(e){}
   const box = $("lessonList"); box.innerHTML = "";
   list.forEach((l, i) => {
     const a = document.createElement("a");
     a.className = "lessonCard"; a.href = "lesson.html?id=" + encodeURIComponent(l.id);
     a.innerHTML = '<span class="num">' + String(i+1).padStart(2,"0") + '</span>' +
-                  '<span class="body"><b></b><span></span></span><span class="go">&rarr;</span>';
+                  '<span class="body"><b></b><span></span></span>' +
+                  '<span class="status" hidden>In progress</span><span class="go">&rarr;</span>';
     a.querySelector("b").textContent = l.title;
     a.querySelector(".body span").textContent = l.description || "";
+    // show which lessons they've already started on this computer
+    try{
+      const raw = localStorage.getItem("hub_work_" + l.id);
+      if (raw){
+        const st = a.querySelector(".status");
+        st.hidden = false;
+        const d = JSON.parse(raw);
+        if (d.__saved) st.textContent = "Saved " + new Date(d.__saved).toLocaleDateString("en-GB");
+      }
+    }catch(e){}
     box.appendChild(a);
   });
   if (!list.length) box.innerHTML = '<p class="hint">No lessons yet.</p>';

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Lesson</title>
 <link rel="stylesheet" href="style.css">
-<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 </head>
 <body class="lesson">
 
@@ -14,7 +14,7 @@
   <span class="sep">/</span>
   <div class="title" id="lessonTitle">Lesson</div>
   <span class="chip" id="saveChip">Not saved yet</span>
-  <button class="btn-ghost no-print" id="pdfBtn">PDF</button>
+  <button class="btn-primary no-print" id="pdfBtn">Download PDF</button>
 </div>
 
 <div class="tracker" id="tracker" aria-hidden="true"></div>
@@ -30,9 +30,8 @@
 </div>
 
 <div class="stage" id="stage">
-  <div class="banner" id="signinBanner" hidden>
-    You're not signed in, so your work <b>will not save</b>.
-    <a href="index.html">Sign in on the home page</a>, then come back.
+  <div class="banner banner-ok no-print" id="resumeNote" hidden>
+    ↩︎ Welcome back — your saved work has been put back on the page.
   </div>
   <div id="blocks"></div>
 </div>
@@ -47,16 +46,23 @@
 </div>
 
 <script>
-const API = (window.HUB && window.HUB.WORKER_URL) || "";
-const token = localStorage.getItem("hub_token") || "";
+/* ---------------------------------------------------------------------
+   This version saves entirely inside the student's own browser
+   (localStorage). There is no login and no server.
+   localStorage is written to disk, so work survives a crash, a power cut
+   or an accidental tab close — but it is tied to THIS computer and THIS
+   browser, and school PCs that wipe profiles on logout will clear it.
+   The PDF is the thing that gets handed in.
+   --------------------------------------------------------------------- */
 const $ = (id) => document.getElementById(id);
 const lessonId = new URLSearchParams(location.search).get("id") || "demo";
+const WORK_KEY = "hub_work_" + lessonId;
 
 const fields = {};   // id -> { get, set }
 const steps  = [];   // { section, check(), brief:{eyebrow,title,text} }
 let step = 0, bypassed = false, lesson = null;
+let pdfDone = false;   // becomes true once they've downloaded their PDF
 
-if (!token) $("signinBanner").hidden = false;
 
 function el(tag, cls, html){ const e=document.createElement(tag); if(cls)e.className=cls; if(html!==undefined)e.innerHTML=html; return e; }
 function setChip(state){
@@ -69,40 +75,62 @@ function normLetters(s){ return (s || "").toUpperCase().replace(/[^A-Z]/g, ""); 
 function wordCount(s){ return (s || "").trim().split(/\s+/).filter(Boolean).length; }
 function stripTags(s){ return String(s || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim(); }
 
-/* ---------- autosave: debounced, deduplicated ---------- */
-const AUTOSAVE_DELAY = 2500, MIN_GAP = 6000;
-let saveTimer = null, lastSent = "", lastSaveAt = 0, saving = false;
+/* ---------- autosave into this browser ----------
+   No network, so we can save immediately on every change. A short debounce
+   only avoids doing pointless work on every keystroke.                     */
+let saveTimer = null, lastSaved = "";
 
 function snapshot(){
-  const data = { __step: step };
+  const data = { __step: step, __saved: new Date().toISOString() };
   Object.entries(fields).forEach(([id, f]) => { data[id] = f.get(); });
   return data;
 }
 function markDirty(){
   refreshGate();
-  if (JSON.stringify(snapshot()) === lastSent) return;
-  setChip("");
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(save, Math.max(AUTOSAVE_DELAY, MIN_GAP - (Date.now() - lastSaveAt)));
+  saveTimer = setTimeout(save, 400);
 }
-async function save(){
-  if (saving || !token || !API || API.indexOf("PASTE_") === 0) return;
+function save(){
   const payload = JSON.stringify(snapshot());
-  if (payload === lastSent) return;
-  saving = true; setChip("saving");
+  if (payload === lastSaved) return;
   try{
-    const r = await fetch(API + "/api/save", {
-      method:"POST",
-      headers:{ "Content-Type":"application/json", Authorization:"Bearer " + token },
-      body: JSON.stringify({ lesson: lessonId, data: JSON.parse(payload) })
-    });
-    if (!r.ok) throw new Error("save failed");
-    lastSent = payload; lastSaveAt = Date.now(); setChip("saved");
-  }catch(e){ setChip("error"); }
-  saving = false;
+    localStorage.setItem(WORK_KEY, payload);
+    lastSaved = payload;
+    setChip("saved");
+  }catch(e){
+    // Storage full, or blocked (private browsing / locked-down browser).
+    setChip("error");
+  }
 }
+// Flush immediately if the page is being hidden or closed.
 window.addEventListener("pagehide", () => { clearTimeout(saveTimer); save(); });
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") save(); });
+
+/* ---------- keep them from losing work by closing the tab ----------
+   Browsers do not let a page block closing outright — the most any site can
+   do is ask the browser to show its own "Leave site?" dialog. We only do
+   this when there is real work and the PDF has not been downloaded yet.   */
+window.addEventListener("beforeunload", (e) => {
+  if (pdfDone) return;                 // they've handed in — let them go
+  if (!hasRealWork()) return;          // nothing to lose — don't nag
+  save();
+  e.preventDefault();
+  e.returnValue = "";                  // required by some browsers
+  return "";
+});
+function hasRealWork(){
+  return Object.entries(fields).some(([id, f]) => {
+    const v = f.get();
+    if (typeof v === "string") return v.trim().length > 0;
+    if (typeof v === "boolean") return v;
+    if (v && typeof v === "object"){
+      if (Array.isArray(v.chosen)) return v.chosen.some(c => c !== null && c !== undefined);
+      if (typeof v.bestScore === "number") return v.bestScore > 0;
+      if (v.answer) return String(v.answer).trim().length > 0;
+    }
+    return false;
+  });
+}
 
 /* ---------- load ---------- */
 fetch("lessons/" + encodeURIComponent(lessonId) + ".json")
@@ -113,7 +141,7 @@ fetch("lessons/" + encodeURIComponent(lessonId) + ".json")
     $("lessonTitle").textContent = l.title;
     l.blocks.forEach(renderBlock);
     buildTracker();
-    if (token && API && API.indexOf("PASTE_")!==0) await loadSaved();
+    loadSaved();
     showStep(step);
   })
   .catch((e) => {
@@ -125,18 +153,19 @@ fetch("lessons/" + encodeURIComponent(lessonId) + ".json")
     $("nextBtn").disabled = true;
   });
 
-async function loadSaved(){
+function loadSaved(){
   try{
-    const r = await fetch(API + "/api/work?lesson=" + encodeURIComponent(lessonId), { headers: { Authorization: "Bearer " + token } });
-    const d = await r.json();
-    if (r.ok && d.data){
-      Object.entries(d.data).forEach(([id, val]) => { if (fields[id]) fields[id].set(val); });
-      if (typeof d.data.__step === "number") step = Math.min(Math.max(d.data.__step, 0), steps.length - 1);
-      lastSent = JSON.stringify(snapshot());
-      setChip("saved");
-    }
-  }catch(e){ /* offline — work continues locally */ }
+    const raw = localStorage.getItem(WORK_KEY);
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    Object.entries(d).forEach(([id, val]) => { if (fields[id]) fields[id].set(val); });
+    if (typeof d.__step === "number") step = Math.min(Math.max(d.__step, 0), steps.length - 1);
+    lastSaved = JSON.stringify(snapshot());
+    setChip("saved");
+    $("resumeNote").hidden = false;
+  }catch(e){ /* corrupt or unavailable — start fresh */ }
 }
+
 
 /* ---------- shell ---------- */
 function buildTracker(){
@@ -176,10 +205,12 @@ $("backBtn").addEventListener("click", () => showStep(step - 1));
 $("nextBtn").addEventListener("click", () => {
   if (step === steps.length - 1){
     save();
-    $("briefEyebrow").textContent = "Complete";
-    $("briefTitle").textContent = "Lesson finished. Well done.";
-    $("briefText").textContent = "Your work is saved. You can use Back to look over anything again.";
-    $("nextBtn").disabled = true;
+    $("briefEyebrow").textContent = "Last thing";
+    $("briefTitle").textContent = "Finished — now download your PDF.";
+    $("briefText").textContent = "Press Download PDF at the top. In the box that appears, choose Save as PDF, then hand that file in. Your work is only saved on this computer, so do not skip this.";
+    $("nextBtn").textContent = "Download PDF ⤓";
+    $("nextBtn").disabled = false;
+    $("nextBtn").onclick = downloadPdf;
     return;
   }
   showStep(step + 1);
@@ -507,7 +538,175 @@ async function runPython(code, out, err){
   }catch(e){ out.textContent = ""; err.textContent = e.message || "Something went wrong running your code."; }
 }
 
-$("pdfBtn").addEventListener("click", () => { save(); window.print(); });
+$("pdfBtn").addEventListener("click", downloadPdf);
+
+/* ---------- build the PDF and download it, no dialog ----------
+   window.print() ALWAYS opens the browser's print dialog — no site can stop
+   that. So we build the document ourselves with jsPDF and save it straight
+   to disk. It's assembled from what the student actually did, so it captures
+   every activity rather than a screenshot of whatever happened to be on
+   screen. If jsPDF can't load (blocked CDN), we fall back to print().     */
+function stripHtml(s){
+  const d = document.createElement("div");
+  d.innerHTML = String(s || "");
+  return (d.textContent || "").replace(/\s+/g, " ").trim();
+}
+
+function downloadPdf(){
+  save();
+  if (!(window.jspdf && window.jspdf.jsPDF)){
+    alert("Could not build the PDF automatically, so the print window will open instead.\n\nChoose 'Save as PDF' as the printer.");
+    window.print();
+    markHandedIn();
+    return;
+  }
+  try{
+    buildPdf().save(fileName());
+    markHandedIn();
+  }catch(err){
+    console.error("PDF build failed:", err);
+    alert("Could not build the PDF, so the print window will open instead.\n\nChoose 'Save as PDF' as the printer.");
+    window.print();
+    markHandedIn();
+  }
+}
+function markHandedIn(){
+  pdfDone = true;
+  document.body.classList.add("pdf-done");
+  $("pdfBtn").textContent = "Download PDF again";
+}
+function fileName(){
+  const d = new Date();
+  const stamp = d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+  return lessonId + "_" + stamp + ".pdf";
+}
+
+function buildPdf(){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:"mm", format:"a4" });
+  const M = 18, W = 210 - M*2, BOTTOM = 297 - M;
+  let y = M;
+
+  function room(h){ if (y + h > BOTTOM){ doc.addPage(); y = M; } }
+  function write(text, opts){
+    const o = opts || {};
+    doc.setFont("helvetica", o.style || "normal");
+    doc.setFontSize(o.size || 11);
+    doc.setTextColor(o.color || "#111111");
+    const lines = doc.splitTextToSize(String(text == null ? "" : text), o.width || W);
+    lines.forEach(line => {
+      room(o.lh || 5.6);
+      doc.text(line, o.x || M, y);
+      y += (o.lh || 5.6);
+    });
+  }
+  function gap(n){ y += (n || 4); }
+  function rule(){ room(4); doc.setDrawColor("#CCCCCC"); doc.line(M, y, M + W, y); y += 5; }
+  function label(t){ write(t, { size:8.5, style:"bold", color:"#777777", lh:4.2 }); }
+
+  // --- header ---
+  write(lesson.title, { size:19, style:"bold", lh:8 });
+  write("Computing lesson hub  ·  " + new Date().toLocaleDateString("en-GB", { day:"numeric", month:"long", year:"numeric" }),
+        { size:9.5, color:"#666666", lh:5 });
+  gap(3); rule();
+
+  // --- every block, in lesson order ---
+  lesson.blocks.forEach((b, i) => {
+    const f = b.id ? fields[b.id] : null;
+    const v = f ? f.get() : null;
+
+    if (b.type === "text"){
+      const txt = stripHtml(b.html);
+      const m = /^([^.!?]{4,80}[.!?]?)/.exec(txt);
+      write(m ? m[1] : "Information", { size:12.5, style:"bold", lh:6 });
+      write(txt, { size:9.5, color:"#555555", lh:4.6 });
+      gap(5); return;
+    }
+
+    if (b.type === "embed"){
+      write(stripHtml(b.title) || "Video", { size:12.5, style:"bold", lh:6 });
+      write(v ? "Watched: yes" : "Watched: not ticked", { size:10.5, color: v ? "#1B7A4B" : "#A33" });
+      gap(5); return;
+    }
+
+    if (b.type === "question"){
+      write(stripHtml(b.prompt), { size:12.5, style:"bold", lh:6 });
+      gap(1); label("ANSWER");
+      const ans = (v || "").trim();
+      write(ans || "(no answer written)", { size:11, color: ans ? "#111111" : "#AA3333" });
+      gap(5); return;
+    }
+
+    if (b.type === "quiz"){
+      write(stripHtml(b.title) || "Quiz", { size:12.5, style:"bold", lh:6 });
+      const score = v ? v.solved.filter(Boolean).length : 0;
+      write("Score: " + score + " out of " + b.questions.length,
+            { size:10.5, style:"bold", color: score === b.questions.length ? "#1B7A4B" : "#B26B00" });
+      gap(2);
+      b.questions.forEach((q, qi) => {
+        write((qi+1) + ". " + stripHtml(q.q), { size:10, style:"bold", lh:4.8 });
+        const c = v && v.chosen ? v.chosen[qi] : null;
+        const chosenText = (c === null || c === undefined) ? "(not answered)" : stripHtml(q.options[c]);
+        const right = c === q.answer;
+        write("Chose: " + chosenText + (c === null || c === undefined ? "" : right ? "  ✓" : "  ✗"),
+              { size:10, color: (c === null || c === undefined) ? "#AA3333" : right ? "#1B7A4B" : "#C0392B", lh:4.8 });
+        if (!right && c !== null && c !== undefined)
+          write("Correct: " + stripHtml(q.options[q.answer]), { size:9.5, color:"#666666", lh:4.4 });
+        gap(2);
+      });
+      gap(3); return;
+    }
+
+    if (b.type === "password"){
+      write(stripHtml(b.title) || "Password challenge", { size:12.5, style:"bold", lh:6 });
+      const bs = v ? v.bestScore : 0, out = v ? v.outOf : 5;
+      write("Best password strength reached: " + bs + " out of " + out,
+            { size:10.5, color: bs >= out ? "#1B7A4B" : "#B26B00" });
+      write("(The password itself is never saved or recorded.)", { size:9, color:"#888888", lh:4.4 });
+      gap(5); return;
+    }
+
+    if (b.type === "caesar"){
+      write(stripHtml(b.title) || "Cipher puzzle", { size:12.5, style:"bold", lh:6 });
+      write("Coded message: " + b.ciphertext, { size:10, color:"#555555", lh:4.8 });
+      write("Shift used: " + (v ? v.shift : 0), { size:10, color:"#555555", lh:4.8 });
+      const okc = v && v.solved;
+      write("Their answer: " + ((v && v.answer) ? v.answer : "(nothing typed)"), { size:11 });
+      write(okc ? "Code cracked ✓" : "Not cracked ✗", { size:10.5, style:"bold", color: okc ? "#1B7A4B" : "#C0392B" });
+      gap(5); return;
+    }
+
+    if (b.type === "link"){
+      write(stripHtml(b.prompt) || "Link handed in", { size:12.5, style:"bold", lh:6 });
+      const url = (v || "").trim();
+      write(url || "(no link pasted)", { size:10.5, color: url ? "#0B5FA5" : "#AA3333" });
+      gap(5); return;
+    }
+
+    if (b.type === "python"){
+      write("Python", { size:12.5, style:"bold", lh:6 });
+      if (b.task) write(stripHtml(b.task), { size:9.5, color:"#555555", lh:4.4 });
+      gap(1); label("THEIR CODE");
+      doc.setFont("courier", "normal");
+      doc.setFontSize(9.5);
+      doc.setTextColor("#111111");
+      doc.splitTextToSize(String(v || "(no code)"), W).forEach(line => {
+        room(4.4); doc.text(line, M, y); y += 4.4;
+      });
+      gap(5); return;
+    }
+  });
+
+  // --- footer on every page ---
+  const pages = doc.getNumberOfPages();
+  for (let p = 1; p <= pages; p++){
+    doc.setPage(p);
+    doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor("#999999");
+    doc.text(lesson.title, M, 291);
+    doc.text("Page " + p + " of " + pages, 210 - M, 291, { align:"right" });
+  }
+  return doc;
+}
 </script>
 </body>
 </html>

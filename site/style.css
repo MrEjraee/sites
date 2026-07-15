@@ -315,3 +315,35 @@ details.answers pre{white-space:pre-wrap; font-family:var(--mono); font-size:13p
   body{background:#fff; color:#000}
   .station,.opt,.feedback{background:#fff; border-color:#bbb}
 }
+
+/* ---- name chip (replaces the sign-in state) ---- */
+.who-chip{
+  font-family:var(--mono); font-size:12px; letter-spacing:.04em;
+  padding:5px 11px; border-radius:999px; border:1px dashed var(--line-2);
+  color:var(--muted); cursor:pointer; white-space:nowrap;
+}
+.who-chip:hover{border-color:var(--amber); color:var(--text)}
+.who-chip:focus-visible{outline:2px solid var(--amber); outline-offset:2px}
+.homebar .who-chip{margin-left:auto}
+
+.banner-ok{background:rgba(65,199,164,.08); border-color:var(--mint-dim); color:#BFEADD}
+
+/* progress marker on the lesson list */
+.lessonCard .status{
+  font-family:var(--mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--mint); border:1px solid var(--mint-dim); border-radius:999px; padding:4px 10px; white-space:nowrap;
+}
+
+/* the PDF is the hand-in, so make it loud once they reach the end */
+.pdf-done #pdfBtn{background:transparent; color:var(--mint); border-color:var(--mint-dim)}
+
+/* print header: only appears on the PDF itself */
+.print-header{display:none}
+@media print{
+  .print-header{
+    display:block !important; padding:0 0 14px; margin:0 0 18px; border-bottom:2px solid #000;
+  }
+  .print-header h1{font-size:22px; margin:0 0 6px}
+  .print-header p{margin:0; font-size:13px}
+  .who-chip,.chip,#pdfBtn{display:none !important}
+}
