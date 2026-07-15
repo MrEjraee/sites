@@ -337,6 +337,30 @@ details.answers pre{white-space:pre-wrap; font-family:var(--mono); font-size:13p
 /* the PDF is the hand-in, so make it loud once they reach the end */
 .pdf-done #pdfBtn{background:transparent; color:var(--mint); border-color:var(--mint-dim)}
 
+/* ---- leave warning ---- */
+.modal-back{
+  position:fixed; inset:0; z-index:100; background:rgba(8,11,18,.78);
+  display:grid; place-items:center; padding:24px; backdrop-filter:blur(3px);
+}
+.modal-back[hidden]{display:none}
+.modal{
+  background:var(--panel); border:1px solid var(--line-2); border-radius:18px;
+  padding:34px 32px 28px; max-width:440px; width:100%; text-align:center;
+  box-shadow:0 24px 60px rgba(0,0,0,.5);
+}
+.modal-eyebrow{
+  font-family:var(--mono); font-size:11px; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--amber); margin:0 0 10px;
+}
+.modal h2{font-size:25px; margin:0 0 12px; line-height:1.2}
+.modal-text{font-size:16.5px; line-height:1.55; color:var(--muted); margin:0 0 24px}
+.modal-text b{color:var(--text)}
+.modal-cta{
+  display:block; width:100%; font-size:19px; padding:17px; border-radius:12px; margin:0 0 10px;
+}
+.modal-stay{display:block; width:100%; padding:11px; font-size:14px; color:var(--muted); border-color:transparent}
+.modal-stay:hover{color:var(--text); border-color:var(--line-2)}
+
 /* print header: only appears on the PDF itself */
 .print-header{display:none}
 @media print{
