@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Year 9 PSHE — Last Lesson</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#16233B;
+    --ink-soft:#4A5872;
+    --paper:#EDF2EC;
+    --card:#FFFFFF;
+    --rule:#CBD6CC;
+    --t1:#D6336C;
+    --t2:#C2410C;
+    --t3:#1D7A46;
+    --t4:#1971C2;
+    --ps:#0B7285;
+    --pen:#7048E8;
+  }
+
+  *{box-sizing:border-box}
+
+  html,body{height:100%}
+  body{
+    margin:0;
+    padding:16px 22px;
+    display:flex;flex-direction:column;
+    font-family:'Archivo',system-ui,sans-serif;
+    color:var(--ink);
+    background-color:var(--paper);
+    background-image:
+      linear-gradient(rgba(22,35,59,.055) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(22,35,59,.055) 1px, transparent 1px);
+    background-size:26px 26px;
+  }
+
+  .strip{
+    display:flex;flex-wrap:wrap;gap:8px 26px;align-items:baseline;
+    padding-bottom:11px;border-bottom:2px solid var(--ink);flex:none;
+  }
+  .strip p{
+    margin:0;font-family:'IBM Plex Mono',monospace;font-size:11.5px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--ink-soft);
+  }
+  .strip b{color:var(--ink);font-weight:600}
+  .strip .title{font-family:'Archivo';font-weight:800;font-size:15px;letter-spacing:0;text-transform:none;color:var(--ink)}
+
+  .grid{
+    flex:1;display:grid;
+    grid-template-columns:repeat(2,1fr);
+    grid-template-rows:repeat(2,1fr);
+    gap:14px;padding:14px 0;min-height:0;
+  }
+
+  .task{
+    display:grid;grid-template-columns:230px 1fr;gap:0 18px;min-height:0;
+    background:var(--card);border:2px solid var(--ink);border-radius:16px;
+    box-shadow:6px 6px 0 var(--accent);padding:14px;
+  }
+
+  .left{display:flex;flex-direction:column;gap:9px;min-width:0}
+  .eyebrow{
+    display:flex;align-items:baseline;gap:7px;margin:0;
+    font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;
+    letter-spacing:.14em;text-transform:uppercase;color:var(--accent);
+  }
+  .eyebrow span{font-size:21px;line-height:1;letter-spacing:-.03em;color:var(--ink)}
+
+  .thumb{display:block;flex:1;min-height:0;border-radius:10px;overflow:hidden;border:2px solid var(--ink);transition:transform .18s ease}
+  .thumb:hover,.thumb:focus-visible{transform:translateY(-3px)}
+  .thumb svg{display:block;width:100%;height:100%;object-fit:cover}
+
+  .go{
+    text-align:center;
+    font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;
+    letter-spacing:.06em;text-transform:uppercase;text-decoration:none;
+    background:var(--ink);color:#fff;padding:9px 8px;border-radius:8px;
+  }
+  .go:hover{background:var(--accent)}
+
+  .right{display:flex;flex-direction:column;justify-content:center;min-width:0}
+  h2{font-size:21px;font-weight:800;letter-spacing:-.02em;line-height:1.1;margin:0 0 3px}
+  h2 a{color:var(--ink);text-decoration:none;border-bottom:3px solid var(--accent)}
+  h2 a:hover{color:var(--accent)}
+  .host{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);margin:0 0 9px;word-break:break-all}
+  .desc{font-size:14px;line-height:1.5;margin:0 0 9px;color:var(--ink)}
+
+  .link{
+    display:inline-flex;align-items:flex-start;gap:7px;align-self:flex-start;
+    background:var(--paper);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;
+    padding:7px 11px;font-size:12.5px;line-height:1.4;color:var(--ink-soft);
+  }
+  .link b{
+    font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--accent);flex:none;padding-top:1px;
+  }
+
+  /* ---- alternatives ---- */
+  .projects{
+    flex:none;display:grid;grid-template-columns:auto 1fr 1fr;gap:0 24px;align-items:center;
+    background:var(--card);border:2px dashed var(--ink);border-radius:16px;padding:20px 22px;
+  }
+  .projects .head{max-width:240px;padding-right:22px;border-right:2px solid var(--rule)}
+  .projects .head h3{margin:0 0 4px;font-size:21px;font-weight:800;letter-spacing:-.02em}
+  .projects .head p{margin:0;font-size:14px;line-height:1.4;color:var(--ink-soft)}
+
+  .opt{display:flex;align-items:center;gap:15px;min-width:0}
+  .opt .icon{
+    flex:none;width:60px;height:60px;display:grid;place-items:center;
+    border:2px solid var(--ink);border-radius:13px;background:var(--card);
+  }
+  .opt .icon svg{width:34px;height:34px}
+  .opt .txt{min-width:0}
+  .opt .txt h4{margin:0 0 3px;font-size:18px;font-weight:800;letter-spacing:-.01em}
+  .opt .txt p{margin:0;font-size:14px;line-height:1.45;color:var(--ink-soft)}
+  kbd{
+    font-family:'IBM Plex Mono',monospace;font-size:12px;background:var(--paper);
+    border:1.5px solid var(--rule);border-bottom-width:3px;border-radius:5px;padding:1px 6px;color:var(--ink);
+  }
+
+  :focus-visible{outline:3px solid var(--t4);outline-offset:3px}
+
+  @media (max-width:900px){
+    html,body{height:auto}
+    .grid{grid-template-columns:1fr;grid-template-rows:none;gap:18px}
+    .task{grid-template-columns:140px 1fr}
+    .thumb{flex:none;min-height:0}
+    .thumb svg{height:auto}
+    .projects{grid-template-columns:1fr;gap:14px}
+    .projects .head{max-width:none;padding-right:0;border-right:none;border-bottom:2px solid var(--rule);padding-bottom:12px}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+  @media print{
+    body{background:#fff;padding:0;height:auto}
+    .go{display:none}
+    .task{box-shadow:none;break-inside:avoid}
+    .grid{grid-template-rows:none}
+  }
+</style>
+</head>
+<body>
+
+  <div class="strip">
+    <p class="title">Last Lesson of the Year</p>
+    <p>Year 9 · PSHE</p>
+    <p>Pick a game · <b>have fun</b></p>
+  </div>
+
+  <div class="grid">
+
+    <!-- 01 — Interland -->
+    <section class="task" style="--accent:var(--t1)">
+      <div class="left">
+        <p class="eyebrow">Game <span>01</span></p>
+        <a class="thumb" href="https://beinternetawesome.withgoogle.com/en_uk/interland" target="_blank" rel="noopener" aria-label="Open Interland">
+          <svg viewBox="0 0 240 150" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <rect width="240" height="150" fill="#FFF0F5"/>
+            <circle cx="200" cy="30" r="22" fill="#D6336C" opacity=".18"/>
+            <path d="M44 116 L120 88 L196 116 L120 144 Z" fill="#D6336C" opacity=".22"/>
+            <path d="M44 116 L120 88 L196 116 L120 144 Z" fill="none" stroke="#16233B" stroke-width="3" stroke-linejoin="round"/>
+            <path d="M82 104 L120 90 L158 104 L158 116 L120 130 L82 116 Z" fill="#fff" stroke="#16233B" stroke-width="3" stroke-linejoin="round"/>
+            <rect x="98" y="40" width="44" height="42" rx="9" fill="#D6336C" stroke="#16233B" stroke-width="3"/>
+            <path d="M107 40 v-9 a13 13 0 0 1 26 0 v9" fill="none" stroke="#16233B" stroke-width="3"/>
+            <circle cx="120" cy="58" r="5.5" fill="#16233B"/>
+            <rect x="117" y="61" width="6" height="12" rx="3" fill="#16233B"/>
+            <path d="M120 82 v9" stroke="#16233B" stroke-width="3"/>
+            <circle cx="52" cy="36" r="4.5" fill="#16233B"/>
+            <circle cx="74" cy="22" r="3.5" fill="#D6336C"/>
+          </svg>
+        </a>
+        <a class="go" href="https://beinternetawesome.withgoogle.com/en_uk/interland" target="_blank" rel="noopener">Open Interland ↗</a>
+      </div>
+      <div class="right">
+        <h2><a href="https://beinternetawesome.withgoogle.com/en_uk/interland" target="_blank" rel="noopener">Interland</a></h2>
+        <p class="host">beinternetawesome.withgoogle.com</p>
+        <p class="desc">A four-island arcade game: outrun phishers, build an unbreakable password and shut down a bully.</p>
+        <p class="link"><b>PSHE</b> <span>Online safety, privacy and standing up to unkindness — the digital side of respect.</span></p>
+      </div>
+    </section>
+
+    <!-- 02 — Cyber Sprinter -->
+    <section class="task" style="--accent:var(--t4)">
+      <div class="left">
+        <p class="eyebrow">Game <span>02</span></p>
+        <a class="thumb" href="https://www.ncsc.gov.uk/training/ncsc-cyber-security-for-young-people-english-scorm-v2/index.html" target="_blank" rel="noopener" aria-label="Open Cyber Sprinter">
+          <svg viewBox="0 0 240 150" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <rect width="240" height="150" fill="#E7F1FB"/>
+            <path d="M0 122 h240" stroke="#16233B" stroke-width="3"/>
+            <g fill="#1971C2" opacity=".25">
+              <rect x="26" y="86" width="16" height="36"/>
+              <rect x="196" y="70" width="18" height="52"/>
+            </g>
+            <g stroke="#16233B" stroke-width="2.5" fill="none" opacity=".45">
+              <path d="M150 112 h22 M150 100 h14"/>
+            </g>
+            <!-- runner -->
+            <g stroke="#16233B" stroke-width="3" stroke-linecap="round">
+              <circle cx="96" cy="52" r="11" fill="#1971C2"/>
+              <path d="M96 63 l-4 26" />
+              <path d="M92 89 l-14 22" />
+              <path d="M92 82 l18 20" />
+              <path d="M94 70 l-20 -6" />
+              <path d="M94 70 l24 -12" />
+            </g>
+            <!-- shield -->
+            <path d="M140 34 l24 8 v18 q0 18 -24 26 q-24 -8 -24 -26 V42 z" fill="#1971C2" opacity=".9" stroke="#16233B" stroke-width="3" stroke-linejoin="round" transform="translate(48 6)"/>
+            <path d="M178 76 l7 8 13 -16" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+            <g stroke="#16233B" stroke-width="3" stroke-linecap="round" opacity=".55">
+              <path d="M40 44 h22 M32 58 h22 M46 30 h18"/>
+            </g>
+          </svg>
+        </a>
+        <a class="go" href="https://www.ncsc.gov.uk/training/ncsc-cyber-security-for-young-people-english-scorm-v2/index.html" target="_blank" rel="noopener">Open Cyber Sprinter ↗</a>
+      </div>
+      <div class="right">
+        <h2><a href="https://www.ncsc.gov.uk/training/ncsc-cyber-security-for-young-people-english-scorm-v2/index.html" target="_blank" rel="noopener">Cyber Sprinter</a></h2>
+        <p class="host">ncsc.gov.uk</p>
+        <p class="desc">A side-scrolling runner from the UK's National Cyber Security Centre — dodge hazards and answer as you go.</p>
+        <p class="link"><b>PSHE</b> <span>Spotting scams and keeping accounts secure — advice from the people who protect the country.</span></p>
+      </div>
+    </section>
+
+    <!-- 03 — Semantris -->
+    <section class="task" style="--accent:var(--t3)">
+      <div class="left">
+        <p class="eyebrow">Game <span>03</span></p>
+        <a class="thumb" href="https://research.google.com/semantris/" target="_blank" rel="noopener" aria-label="Open Semantris">
+          <svg viewBox="0 0 240 150" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <rect width="240" height="150" fill="#E7F4EC"/>
+            <g stroke="#16233B" stroke-width="2.5">
+              <rect x="70" y="24" width="100" height="24" rx="6" fill="#1D7A46"/>
+              <rect x="52" y="54" width="118" height="24" rx="6" fill="#40C057" opacity=".85"/>
+              <rect x="84" y="84" width="86" height="24" rx="6" fill="#fff"/>
+              <rect x="66" y="114" width="104" height="24" rx="6" fill="#1D7A46" opacity=".45"/>
+            </g>
+            <rect x="86" y="31" width="40" height="5" rx="2.5" fill="#fff"/>
+            <rect x="68" y="61" width="52" height="5" rx="2.5" fill="#fff"/>
+            <rect x="100" y="91" width="46" height="5" rx="2.5" fill="#16233B" opacity=".4"/>
+            <path d="M178 66 h34 m-12 -8 l12 8 -12 8" fill="none" stroke="#1D7A46" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </a>
+        <a class="go" href="https://research.google.com/semantris/" target="_blank" rel="noopener">Open Semantris ↗</a>
+      </div>
+      <div class="right">
+        <h2><a href="https://research.google.com/semantris/" target="_blank" rel="noopener">Semantris</a></h2>
+        <p class="host">research.google.com</p>
+        <p class="desc">Type a clue and an AI guesses which word you mean. Clear the stack before it reaches the top.</p>
+        <p class="link"><b>PSHE</b> <span>Getting your meaning across under pressure — how good is your vocabulary really?</span></p>
+      </div>
+    </section>
+
+    <!-- 04 — Compute It -->
+    <section class="task" style="--accent:var(--t2)">
+      <div class="left">
+        <p class="eyebrow">Game <span>04</span></p>
+        <a class="thumb" href="https://compute-it.toxicode.fr/" target="_blank" rel="noopener" aria-label="Open Compute It">
+          <svg viewBox="0 0 240 150" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <rect width="240" height="150" fill="#FFF3EC"/>
+            <rect x="30" y="24" width="90" height="102" rx="8" fill="#fff" stroke="#16233B" stroke-width="3"/>
+            <rect x="42" y="40" width="50" height="6" rx="3" fill="#C2410C"/>
+            <rect x="42" y="56" width="66" height="6" rx="3" fill="#16233B" opacity=".3"/>
+            <rect x="52" y="72" width="56" height="6" rx="3" fill="#16233B" opacity=".3"/>
+            <rect x="52" y="88" width="40" height="6" rx="3" fill="#16233B" opacity=".3"/>
+            <rect x="42" y="104" width="48" height="6" rx="3" fill="#C2410C"/>
+            <path d="M126 75 h34" stroke="#C2410C" stroke-width="4"/>
+            <path d="M152 67 l10 8 -10 8" fill="none" stroke="#C2410C" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+            <rect x="170" y="52" width="44" height="46" rx="8" fill="#C2410C" opacity=".16" stroke="#16233B" stroke-width="3"/>
+            <text x="180" y="84" font-family="monospace" font-size="26" font-weight="bold" fill="#16233B">7</text>
+          </svg>
+        </a>
+        <a class="go" href="https://compute-it.toxicode.fr/" target="_blank" rel="noopener">Open Compute It ↗</a>
+      </div>
+      <div class="right">
+        <h2><a href="https://compute-it.toxicode.fr/" target="_blank" rel="noopener">Compute It</a></h2>
+        <p class="host">compute-it.toxicode.fr</p>
+        <p class="desc">Be the computer: follow a program line by line and predict exactly what it does. Gets fiendish fast.</p>
+        <p class="link"><b>PSHE</b> <span>Pure brain-stretch — a lesson in patience and sticking with something hard.</span></p>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Alternatives -->
+  <section class="projects">
+    <div class="head">
+      <h3>Or, if you'd rather</h3>
+      <p>Make a poster about PSHE — or anything else you've learnt this year:</p>
+    </div>
+
+    <div class="opt" style="--accent:var(--ps)">
+      <span class="icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#0B7285" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="3" width="18" height="18" rx="3"/>
+          <path d="M8 17 V8 h3.2a2.9 2.9 0 0 1 0 5.8H8"/>
+          <path d="M16.5 15.2c.9.6 2.5.5 2.5-.7 0-1.5-2.8-.9-2.8-2.4 0-1.1 1.5-1.3 2.4-.8"/>
+        </svg>
+      </span>
+      <div class="txt">
+        <h4>A poster in Photoshop</h4>
+        <p>Press <kbd>⊞ Win</kbd> and search for <b>Adobe Photoshop CS6</b></p>
+      </div>
+    </div>
+
+    <div class="opt" style="--accent:var(--pen)">
+      <span class="icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#7048E8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M14.5 3.5 20.5 9.5 9 21 3 21 3 15z"/>
+          <path d="M13 5 19 11"/>
+          <path d="M3 21 21 21" opacity=".45"/>
+        </svg>
+      </span>
+      <div class="txt">
+        <h4>A poster on paper</h4>
+        <p>Grab a pen and create a poster on paper</p>
+      </div>
+    </div>
+  </section>
+
+</body>
+</html>
